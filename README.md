@@ -111,3 +111,6 @@ The house has no street address assigned. It is referred to as
 Configured for Railway in `railway.json`. Needs a Postgres service and
 `DATABASE_URL` wired to it. `npm run start:prod` runs `prisma migrate deploy`
 before starting, so migrations apply on release.
+
+Step by step, including the custom domain and the DNS record Jesse needs:
+`docs/deploying.md`.
