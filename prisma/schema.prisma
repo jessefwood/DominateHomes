@@ -1,0 +1,564 @@
+// Plan 643 Bianca PSL client portal - data model
+//
+// Three rules in this file are structural, not cosmetic. Read these before
+// changing anything below.
+//
+// 1. NEVER MORE THAN 3 OPTIONS PER ITEM.
+//    Enforced by OptionSlot (exactly three values: A, B, C) plus
+//    @@unique([selectionId, slot]) on SelectionOption. A fourth option has
+//    nowhere to go: it must either reuse a taken slot (unique violation) or
+//    supply a slot outside the enum (enum violation). Both are rejected by
+//    Postgres, not by the UI. Do not add a D. Do not drop the unique.
+//
+// 2. FURNISHING SPEND AND THE DESIGNER'S EXPENSES NEVER BLEND.
+//    Every BudgetLine carries a required `type` with no default, so a line
+//    cannot be written without declaring which side of the wall it is on.
+//    Read totals through lib/budget.ts, which only ever returns the two
+//    sides separately.
+//
+// 3. APPROVALS SNAPSHOT PRICE AT SIGNING.
+//    ApprovalLine copies name, vendor, price, lead time and the
+//    non-returnable flag as literal values at the moment of signing. It has
+//    no foreign key to a live price. Prices move between approval and order
+//    and the record has to show what she actually agreed to.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 keeps the connection URL out of the schema. Migrate reads it from
+// prisma.config.ts; the client gets it through the pg adapter in lib/db.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// People
+// ---------------------------------------------------------------------------
+
+enum Role {
+  CLIENT
+  DESIGNER
+}
+
+/// Deliberately carries no password hash, no magic-link token, no provider id.
+/// The sign-in mechanism is still an open decision, so identity lives here and
+/// whatever credential model gets chosen attaches to it in its own table.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      Role
+  createdAt DateTime @default(now())
+
+  approvals       Approval[]
+  answeredItems   OpenItem[] @relation("AnsweredBy")
+
+  @@index([role])
+}
+
+// ---------------------------------------------------------------------------
+// Project and rooms
+// ---------------------------------------------------------------------------
+
+enum Phase {
+  DIRECTION
+  SELECTIONS
+  APPROVALS
+  ORDERING
+  DELIVERY
+  INSTALL
+  COMPLETE
+}
+
+model Project {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  /// GL Homes has not assigned a street address yet, so this label is what
+  /// appears everywhere including client-facing copy. addressLine stays null
+  /// until the lot number comes through.
+  displayName String
+  addressLine String?
+  community   String
+  planName    String
+  acSqFt      Int
+  totalSqFt   Int
+
+  phase       Phase
+  clientName  String
+  designer    String
+
+  /// The allocation the project is planned against, in cents. Mid tier.
+  allocationCents Int
+
+  earliestCloseOn DateTime?
+  installAfterOn  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms        Room[]
+  budgetLines  BudgetLine[]
+  reusePieces  ReusePiece[]
+  artPieces    ArtPiece[]
+  openItems    OpenItem[]
+  milestones   Milestone[]
+}
+
+enum RoomTier {
+  MAJOR
+  LIGHT
+  /// Rooms in the schedule that are explicitly out of scope, e.g. the laundry.
+  EXCLUDED
+}
+
+enum ApprovalStatus {
+  NOT_READY
+  READY_FOR_APPROVAL
+  APPROVED
+}
+
+model Room {
+  id        String @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name  String
+  slug  String
+  order Int
+
+  /// Null where the plan book gives no dimension, e.g. the cabana bath.
+  widthFt  Int?
+  lengthFt Int?
+
+  tier    RoomTier
+  rugSize String?
+
+  /// Planning bands in cents. These are bands built from retail price points,
+  /// not quotes, and nothing goes in a client proposal until it is priced
+  /// against live SKUs.
+  budgetLowCents  Int
+  budgetMidCents  Int
+  budgetHighCents Int
+
+  /// The contents line from the room schedule, and any constraint that limits
+  /// what can be ordered (depth, wall run, stool count).
+  contents        String
+  constraintNote  String?
+  /// Set where the layout itself is unresolved, e.g. the great room TV wall.
+  unresolvedNote  String?
+
+  approvalStatus ApprovalStatus @default(NOT_READY)
+
+  selections  Selection[]
+  approvals   Approval[]
+  budgetLines BudgetLine[]
+  reusePieces ReusePiece[]
+  artPieces   ArtPiece[]
+
+  @@unique([projectId, slug])
+  @@index([projectId, order])
+}
+
+// ---------------------------------------------------------------------------
+// Selections: the 3-options-max picker
+// ---------------------------------------------------------------------------
+
+/// Exactly three. This enum is the ceiling that makes a fourth option
+/// impossible. Adding a value here breaks the client's rule.
+enum OptionSlot {
+  A
+  B
+  C
+}
+
+enum SelectionStatus {
+  PENDING
+  CHOSEN
+  APPROVED
+  ORDERED
+  RECEIVED
+}
+
+model Selection {
+  id     String @id @default(cuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  /// Stable human-facing reference, e.g. GR-SOFA. Shown in the portal and on
+  /// the approval record so a line can be talked about over the phone.
+  ref      String @unique
+  name     String
+  category String
+  qty      Int    @default(1)
+  notes    String?
+
+  /// The planning band for this item from the budget, in cents. These are
+  /// bands built from retail price points, not quotes. Once the three options
+  /// are loaded and priced against live SKUs, option prices are what count and
+  /// this stays only as the figure the room was planned against.
+  plannedLowCents  Int?
+  plannedHighCents Int?
+
+  status SelectionStatus @default(PENDING)
+
+  /// Which of the three she picked. The composite relation below ties this to
+  /// an option belonging to THIS selection, so a chosen option can never point
+  /// at some other item's row.
+  chosenSlot   OptionSlot?
+  /// Restrict, not SetNull: `id` is required so Postgres cannot null half of
+  /// this composite key. Un-choose the option before deleting it, which is the
+  /// behaviour we want anyway. It stops a decision being silently orphaned.
+  chosenOption SelectionOption? @relation("ChosenOption", fields: [id, chosenSlot], references: [selectionId, slot], onDelete: Restrict, onUpdate: Cascade)
+  chosenAt     DateTime?
+
+  options       SelectionOption[] @relation("SelectionOptions")
+  approvalLines ApprovalLine[]
+  budgetLines   BudgetLine[]
+  order         PurchaseOrder?
+
+  @@index([roomId])
+  @@index([status])
+}
+
+model SelectionOption {
+  id          String     @id @default(cuid())
+  selectionId String
+  selection   Selection  @relation("SelectionOptions", fields: [selectionId], references: [id], onDelete: Cascade)
+
+  /// A, B or C. There is no fourth slot.
+  slot OptionSlot
+
+  label       String
+  vendor      String
+  /// Unit price in cents. Band-derived until priced against a live SKU.
+  priceCents  Int
+  leadTimeDays Int?
+  dimensions  String?
+  photoUrl    String?
+  productUrl  String?
+  colorway    String?
+
+  /// Custom and made-to-order goods cannot be returned. The approval screen
+  /// has to say so at the point of signing.
+  nonReturnable Boolean @default(false)
+
+  /// True once priced against a live SKU rather than a planning band.
+  pricedLive Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  chosenBy Selection[] @relation("ChosenOption")
+
+  /// This is rule 1. Three slots, one row each, per selection.
+  @@unique([selectionId, slot])
+  @@index([selectionId])
+}
+
+// ---------------------------------------------------------------------------
+// Approvals: price snapshot at signing
+// ---------------------------------------------------------------------------
+
+/// Written once and never updated. Every money figure here is a copy taken at
+/// signing, not a reference to a live price.
+model Approval {
+  id     String @id @default(cuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  signedAt       DateTime @default(now())
+  signedByUserId String
+  signedBy       User     @relation(fields: [signedByUserId], references: [id])
+
+  /// Typed name at signing, kept verbatim alongside the user id.
+  signedByName String
+  /// The exact wording shown above the signature on the day, kept so the
+  /// record shows what she was told, not what the template says now.
+  statementShown String
+
+  /// Snapshot totals, in cents, split by type and never summed together.
+  furnishingTotalCents Int
+  expenseTotalCents    Int
+
+  /// True if any line in this approval was non-returnable.
+  includedNonReturnable Boolean @default(false)
+
+  lines ApprovalLine[]
+
+  @@index([roomId, signedAt])
+}
+
+/// One frozen line per item approved. Values are copies. The selectionId is
+/// kept for traceability only and is never read to display a price.
+model ApprovalLine {
+  id         String   @id @default(cuid())
+  approvalId String
+  approval   Approval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+
+  selectionId String?
+  selection   Selection? @relation(fields: [selectionId], references: [id], onDelete: SetNull)
+
+  /// Copied at signing.
+  selectionRef  String
+  itemName      String
+  optionLabel   String
+  optionSlot    OptionSlot
+  vendor        String
+  qty           Int
+  unitPriceCents Int
+  lineTotalCents Int
+  leadTimeDays  Int?
+  dimensions    String?
+  nonReturnable Boolean
+  budgetType    BudgetType
+
+  @@index([approvalId])
+}
+
+// ---------------------------------------------------------------------------
+// Budget: two totals that never blend
+// ---------------------------------------------------------------------------
+
+/// Rule 2. Furnishing is what the goods cost. Expense is the designer's own
+/// cost of doing the work. They are reported as two columns, always.
+enum BudgetType {
+  FURNISHING
+  EXPENSE
+}
+
+enum BudgetState {
+  /// Allocated in the plan, nothing promised to a vendor.
+  PLANNED
+  /// She approved it and it is promised, not yet paid.
+  COMMITTED
+  /// Money has left.
+  SPENT
+}
+
+model BudgetLine {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  roomId String?
+  room   Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  selectionId String?
+  selection   Selection? @relation(fields: [selectionId], references: [id], onDelete: SetNull)
+
+  /// Required, no default. A line cannot exist without declaring its side.
+  type  BudgetType
+  state BudgetState
+
+  label       String
+  category    String?
+  vendor      String?
+  amountCents Int
+  note        String?
+  incurredOn  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, type, state])
+  @@index([roomId])
+}
+
+// ---------------------------------------------------------------------------
+// Her pieces: the reuse inventory
+// ---------------------------------------------------------------------------
+
+enum KeepStatus {
+  KEEP
+  RELEASE
+  UNDECIDED
+}
+
+model ReusePiece {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  /// Inventory number from the consult, e.g. "01". Null for pieces counted
+  /// outside the numbered list.
+  inventoryNo String?
+  name        String
+  description String?
+
+  /// Confirmed measurements where they exist. Sizes taken off a photograph
+  /// are flagged by measurementsConfirmed = false.
+  dimensions            String?
+  measurementsConfirmed Boolean @default(false)
+
+  condition String?
+  photoUrl  String?
+
+  status KeepStatus @default(UNDECIDED)
+  /// Set where the destination depends on which reuse scenario is chosen.
+  scenarioDependent Boolean @default(false)
+
+  destinationRoomId String?
+  destinationRoom   Room?   @relation(fields: [destinationRoomId], references: [id], onDelete: SetNull)
+
+  /// What buying this new would cost instead, in cents. A band.
+  replacementLowCents  Int?
+  replacementHighCents Int?
+
+  /// e.g. needs a slipcover before it goes in a room.
+  treatmentNote String?
+
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Art
+// ---------------------------------------------------------------------------
+
+enum ArtDecision {
+  IN
+  OUT
+}
+
+enum ReframeStatus {
+  NOT_NEEDED
+  APPROVED_TO_REFRAME
+  AT_FRAMER
+  DONE
+}
+
+model ArtPiece {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title  String
+  artist String?
+  medium String?
+
+  /// Framed dimensions in inches. Most sizes on file are estimated from a
+  /// photograph, which is what sizeConfirmed tracks. Scale decides which wall
+  /// a piece can hold, so an unconfirmed size cannot be hung from.
+  widthIn       Int?
+  heightIn      Int?
+  sizeLabel     String?
+  sizeConfirmed Boolean @default(false)
+
+  decision      ArtDecision
+  reframeStatus ReframeStatus @default(NOT_NEEDED)
+  frameFinish   String?
+
+  /// Heavy pieces under glass need studs or a cleat.
+  needsStudsOrCleat Boolean @default(false)
+
+  destinationRoomId String?
+  destinationRoom   Room?   @relation(fields: [destinationRoomId], references: [id], onDelete: SetNull)
+  wallNote          String?
+
+  @@index([projectId, decision])
+}
+
+// ---------------------------------------------------------------------------
+// Open items
+// ---------------------------------------------------------------------------
+
+enum OpenItemOwner {
+  CLIENT
+  DESIGNER
+}
+
+enum OpenItemStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+model OpenItem {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  /// Who owes it. The portal shows her list and Davina's list side by side.
+  owner  OpenItemOwner
+  title  String
+  detail String?
+  order  Int
+
+  status OpenItemStatus @default(OPEN)
+
+  /// Answered inline, which is the point of the screen.
+  answer           String?
+  answeredAt       DateTime?
+  answeredByUserId String?
+  answeredBy       User?     @relation("AnsweredBy", fields: [answeredByUserId], references: [id], onDelete: SetNull)
+
+  /// Set where this answer blocks ordering, e.g. window sizes for the blinds.
+  blocksOrdering Boolean @default(false)
+
+  @@index([projectId, owner, order])
+}
+
+// ---------------------------------------------------------------------------
+// Timeline
+// ---------------------------------------------------------------------------
+
+model Milestone {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  label  String
+  detail String?
+  order  Int
+
+  /// The date where one is fixed, and the label the project actually uses
+  /// where the timing is a window rather than a day.
+  occursOn   DateTime?
+  dateLabel  String
+
+  /// The December ordering deadline is called out on the timeline.
+  isDeadline Boolean @default(false)
+
+  @@index([projectId, order])
+}
+
+// ---------------------------------------------------------------------------
+// Order tracker
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  ORDERED
+  ACKNOWLEDGED
+  IN_TRANSIT
+  RECEIVED
+  DAMAGED
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  selectionId String    @unique
+  selection   Selection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+
+  vendor   String
+  poNumber String?
+
+  status OrderStatus @default(ORDERED)
+
+  /// Vendors lock price at order acknowledgement, not delivery, so the
+  /// acknowledged price is its own field.
+  orderedPriceCents     Int
+  acknowledgedPriceCents Int?
+
+  orderedAt      DateTime  @default(now())
+  acknowledgedAt DateTime?
+  etaAt          DateTime?
+  receivedAt     DateTime?
+
+  /// Where the goods land. She is in a rental until the house is ready, so
+  /// this is either the rental, a receiving warehouse, or the house.
+  deliverTo String?
+  note      String?
+
+  @@index([status])
+}

@@ -1,0 +1,113 @@
+# Plan 643 Bianca PSL client portal
+
+A client portal for the Dominate Homes interior design project at Valencia Parc
+at Riverland, Port St. Lucie. Abbie signs in and works through it.
+
+The source of truth for the content is in `docs/`:
+
+- `docs/plan-643-bianca-psl-portal-source.md` — the whole project, with the
+  build spec in section 11
+- `docs/abbie-sourcing-and-budget.md` — the line-item budget detail
+
+## The three rules
+
+These are structural. They are enforced at the database, not in the UI, and
+they have tests. Read this before changing the schema.
+
+### 1. Never more than three options per item
+
+Three layers, outermost first:
+
+| Layer | Where | What stops a fourth |
+|---|---|---|
+| Database | `OptionSlot` enum plus `@@unique([selectionId, slot])` | The enum has exactly three values and each is unique per item. A fourth row must either reuse a slot or invent a slot value. Postgres rejects both. |
+| Types | `OptionSet` in `lib/selections.ts` | A tuple union capped at three. A fourth element does not compile. |
+| Write path | `setOptions` / `addOption` | Throws `TooManyOptionsError` with a readable message instead of a constraint stack trace. |
+
+A chosen option is tied to its own item by a composite foreign key
+(`Selection.id + chosenSlot` references `SelectionOption.selectionId + slot`),
+so a choice can never point at another item's option, and an option a decision
+points at cannot be deleted.
+
+### 2. Furnishing spend and the designer's expenses never blend
+
+Every `BudgetLine` carries a required `type` of `FURNISHING` or `EXPENSE` with
+no default, so a line cannot be written without declaring its side.
+
+`lib/budget.ts` has no function that returns a combined number and
+`BudgetTotals` has no total field. That is deliberate. A test asserts the shape
+so that adding one is a visible decision rather than a convenience.
+
+### 3. Approvals snapshot price at signing
+
+`ApprovalLine` copies the name, vendor, unit price, lead time and
+non-returnable flag as literal values at the moment of signing. It holds no
+foreign key to a live price. `selectionId` is kept for traceability and is
+never read to render money. Approvals are written once and never updated: to
+change an approved room you sign a new one and the old record stands.
+
+The test that matters moves a vendor price after signing and asserts the
+record does not move with it.
+
+## Running it locally
+
+Needs Node 22 and Postgres 16.
+
+```bash
+./scripts/dev-db.sh          # starts Postgres on 5433, creates both databases
+cp .env.example .env         # then set DATABASE_URL
+npm install
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+Tests run against a separate database:
+
+```bash
+DATABASE_URL="postgresql://postgres@127.0.0.1:5433/portal_test" npm test
+```
+
+## Screens
+
+| Route | What it does |
+|---|---|
+| `/` | Dashboard: phase, what is waiting on her, what is waiting on Davina, days to install |
+| `/rooms` | Every room with dimensions, tier, contents, budget band and pick status |
+| `/rooms/[slug]` | The room, its item list, and the three-slot picker per item |
+| `/budget` | Two separate totals, planned, committed, spent and remaining on each |
+| `/approvals` | Signed records with frozen prices |
+| `/pieces` | The reuse inventory with keep or release and destination room |
+| `/art` | Pieces, sizes, reframe status, hanging rules |
+| `/open-items` | Her list and Davina's side by side, answered inline |
+| `/timeline` | Dated milestones with the December ordering deadline called out |
+| `/orders` | Order tracker, fills up once procurement starts |
+| `/healthz` | Database reachability, no auth, for the deploy health check |
+
+## What is not done yet
+
+- **Sign-in.** `lib/session.ts` is a placeholder that resolves the client user
+  without authenticating anyone. A production build refuses to start unless
+  `ALLOW_PLACEHOLDER_AUTH=yes` is set, so this cannot quietly ship.
+- **The designer side.** There is no admin UI. Selections, options and order
+  status are loaded by seed or by hand.
+- **The three options per item.** None are seeded, because none exist yet.
+  Every item sits at `PENDING` with three empty slots, which is the real state
+  of the project.
+- **The expense column.** Seeded with labelled placeholders at zero. No
+  designer expense has been quoted, and the design services agreement and
+  pricing proposal both need to exist first.
+
+## Content notes
+
+Client-facing copy is written the way Davina talks. No em dashes, few inline
+links, speaking directly to Abbie.
+
+The house has no street address assigned. It is referred to as
+*Plan 643 Bianca PSL* everywhere, client-facing included.
+
+## Deploying
+
+Configured for Railway in `railway.json`. Needs a Postgres service and
+`DATABASE_URL` wired to it. `npm run start:prod` runs `prisma migrate deploy`
+before starting, so migrations apply on release.

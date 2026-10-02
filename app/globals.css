@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/*
+ * Palette comes from the approved direction: a sand, oyster and driftwood
+ * field, sea glass as the only real colour, and black used in thin deliberate
+ * lines rather than as a block. Modern coastal blended with traditional New
+ * England coastal. Florida, not Colorado.
+ */
+@theme {
+  --color-oyster: #faf8f4;
+  --color-oyster-deep: #f2eee6;
+  --color-sand: #e7dfd1;
+  --color-sand-deep: #d8cdb9;
+  --color-driftwood: #8a7f70;
+  --color-driftwood-deep: #5f564a;
+  --color-ink: #1c1a17;
+  --color-seaglass: #6f9a92;
+  --color-seaglass-deep: #4f7872;
+  --color-seaglass-wash: #e8f0ee;
+  --color-clay: #a8654f;
+
+  --font-display: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+}
+
+html {
+  background: var(--color-oyster);
+}
+
+body {
+  background: var(--color-oyster);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin deliberate lines, per the direction. Never a heavy border. */
+.hairline {
+  border-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+}
