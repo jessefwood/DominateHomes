@@ -1,23 +1,47 @@
 @import "tailwindcss";
 
 /*
- * Palette comes from the approved direction: a sand, oyster and driftwood
- * field, sea glass as the only real colour, and black used in thin deliberate
- * lines rather than as a block. Modern coastal blended with traditional New
- * England coastal. Florida, not Colorado.
+ * Palette: sage green and rust, drawn from Sherwin Williams colours that have
+ * been at the top of the specified-most lists for years. Hex values are close
+ * matches rather than official SW values, which vary by source and by finish.
+ *
+ *   Alabaster        SW 7008   the 2016 colour of the year, still the default
+ *                              warm white on most high end jobs
+ *   Accessible Beige SW 7036   the quiet surface neutral
+ *   Evergreen Fog    SW 9130   the 2022 colour of the year, the sage
+ *   Clary Sage       SW 6178   the deeper sage, used for text on sage
+ *   Cavern Clay      SW 7701   the 2019 colour of the year, the rust
+ *   Urbane Bronze    SW 7048   the 2021 colour of the year, used as the near
+ *                              black so lines read warm rather than cold
+ *
+ * Sage carries status and anything chosen or approved. Rust is the accent and
+ * is reserved for things that are genuinely unresolved, so it keeps meaning.
+ *
+ * Separate from the house palette. The approved direction for the house is
+ * sand, oyster and driftwood with sea glass as the only real colour. This is
+ * the portal's own skin.
  */
 @theme {
-  --color-oyster: #faf8f4;
-  --color-oyster-deep: #f2eee6;
-  --color-sand: #e7dfd1;
-  --color-sand-deep: #d8cdb9;
-  --color-driftwood: #8a7f70;
-  --color-driftwood-deep: #5f564a;
-  --color-ink: #1c1a17;
-  --color-seaglass: #6f9a92;
-  --color-seaglass-deep: #4f7872;
-  --color-seaglass-wash: #e8f0ee;
-  --color-clay: #a8654f;
+  /* Alabaster SW 7008 */
+  --color-oyster: #f2efe6;
+  --color-oyster-deep: #e9e4d7;
+  /* Accessible Beige SW 7036 */
+  --color-sand: #ded5c6;
+  --color-sand-deep: #cabfab;
+  /* Urbane Bronze SW 7048, lightened for secondary text */
+  --color-driftwood: #857f73;
+  --color-driftwood-deep: #5c574d;
+  /* Urbane Bronze SW 7048 */
+  --color-ink: #3b3a34;
+  /* Evergreen Fog SW 9130 */
+  --color-seaglass: #95978a;
+  /* Clary Sage SW 6178 */
+  --color-seaglass-deep: #5f6b55;
+  --color-seaglass-wash: #e4e7dd;
+  /* Cavern Clay SW 7701 */
+  --color-clay: #a9694c;
+  --color-clay-deep: #8a5139;
+  --color-clay-wash: #f3e7e0;
 
   --font-display: ui-serif, Georgia, Cambria, "Times New Roman", serif;
 }
@@ -32,7 +56,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Thin deliberate lines, per the direction. Never a heavy border. */
+/* Thin deliberate lines. Never a heavy border. */
 .hairline {
-  border-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-ink) 14%, transparent);
 }

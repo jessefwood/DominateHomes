@@ -28,7 +28,7 @@ export default async function SignInPage({
         <h1 className="font-display mt-1 text-2xl leading-tight text-ink">Plan 643 Bianca PSL</h1>
 
         {message ? (
-          <p className="mt-4 rounded-md bg-clay/5 p-3 text-sm leading-relaxed text-driftwood-deep">
+          <p className="mt-4 rounded-md bg-clay-wash p-3 text-sm leading-relaxed text-driftwood-deep">
             {message}
           </p>
         ) : (

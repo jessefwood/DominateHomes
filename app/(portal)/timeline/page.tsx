@@ -27,7 +27,7 @@ export default async function TimelinePage() {
                 milestone.isDeadline ? 'bg-clay' : 'bg-driftwood'
               }`}
             />
-            <Card className={`p-5 ${milestone.isDeadline ? 'border-clay/30 bg-clay/5' : ''}`}>
+            <Card className={`p-5 ${milestone.isDeadline ? 'border-clay/30 bg-clay-wash' : ''}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-display text-lg text-ink">{milestone.label}</h2>
                 {milestone.isDeadline ? <Pill tone="clay">Deadline</Pill> : null}

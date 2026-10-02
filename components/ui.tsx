@@ -40,7 +40,7 @@ const TONES = {
   neutral: 'bg-sand text-driftwood-deep',
   sea: 'bg-seaglass-wash text-seaglass-deep',
   ink: 'bg-ink text-oyster',
-  clay: 'bg-clay/10 text-clay',
+  clay: 'bg-clay-wash text-clay-deep',
 } as const
 
 export function Pill({
@@ -60,8 +60,8 @@ export function Pill({
 /** A flag for something genuinely unresolved. Shown, not hidden. */
 export function OpenQuestion({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-clay/25 bg-clay/5 p-3 text-sm leading-relaxed text-driftwood-deep">
-      <span className="mr-1.5 font-medium text-clay">Still open.</span>
+    <div className="rounded-md border border-clay/30 bg-clay-wash p-3 text-sm leading-relaxed text-driftwood-deep">
+      <span className="mr-1.5 font-medium text-clay-deep">Still open.</span>
       {children}
     </div>
   )
