@@ -26,9 +26,9 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/portal_test
-      # The placeholder session refuses to run a production build without this.
-      # Remove it from CI once real sign-in lands, so the guard has teeth here too.
-      ALLOW_PLACEHOLDER_AUTH: 'yes'
+      # Sign-in links are not sent in CI. Unset RESEND_API_KEY means the console
+      # mailer, which is what the build and tests expect.
+      APP_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v4

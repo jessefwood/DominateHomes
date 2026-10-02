@@ -82,13 +82,34 @@ DATABASE_URL="postgresql://postgres@127.0.0.1:5433/portal_test" npm test
 | `/open-items` | Her list and Davina's side by side, answered inline |
 | `/timeline` | Dated milestones with the December ordering deadline called out |
 | `/orders` | Order tracker, fills up once procurement starts |
+| `/signin` | Asks for an email and sends a sign-in link |
 | `/healthz` | Database reachability, no auth, for the deploy health check |
+
+## Sign-in
+
+Magic link. She puts in her email, gets a link, clicks it, she is in. No
+password to remember or reset.
+
+- The emailed token and the session cookie are both random 32-byte secrets.
+  Only their SHA-256 hashes are stored, so reading the database does not let
+  anyone sign in.
+- A link works once, lasts 20 minutes, and redeeming one burns every other
+  outstanding link for that account, so a forwarded email cannot be replayed.
+- There is no self-signup. An address with no user row gets the same response
+  as one that has, and no email. Accounts are created by seed or by hand.
+- Requesting a link cannot be used to find out who is on the project.
+- Sessions last 30 days in an httpOnly, sameSite lax cookie, secure in
+  production.
+
+Everything behind sign-in lives in the `app/(portal)` route group, whose layout
+calls `requireUser()`. Pages inside it do not check for themselves. `/signin`,
+`/healthz` and the auth routes sit outside the group.
+
+In development, leave `RESEND_API_KEY` unset and links print to the server
+console. No email account needed to work on this.
 
 ## What is not done yet
 
-- **Sign-in.** `lib/session.ts` is a placeholder that resolves the client user
-  without authenticating anyone. A production build refuses to start unless
-  `ALLOW_PLACEHOLDER_AUTH=yes` is set, so this cannot quietly ship.
 - **The designer side.** There is no admin UI. Selections, options and order
   status are loaded by seed or by hand.
 - **The three options per item.** None are seeded, because none exist yet.

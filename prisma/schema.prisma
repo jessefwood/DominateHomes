@@ -41,9 +41,12 @@ enum Role {
   DESIGNER
 }
 
-/// Deliberately carries no password hash, no magic-link token, no provider id.
-/// The sign-in mechanism is still an open decision, so identity lives here and
-/// whatever credential model gets chosen attaches to it in its own table.
+/// Carries no password hash. Sign-in is by emailed magic link, so the only
+/// credential is a short-lived single-use token in LoginToken.
+///
+/// There is no self-signup. A person can only sign in if a user row already
+/// exists for their address, which is correct for a portal with two people in
+/// it and means a stray address can never create an account.
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -51,10 +54,47 @@ model User {
   role      Role
   createdAt DateTime @default(now())
 
-  approvals       Approval[]
-  answeredItems   OpenItem[] @relation("AnsweredBy")
+  approvals     Approval[]
+  answeredItems OpenItem[] @relation("AnsweredBy")
+  loginTokens   LoginToken[]
+  sessions      Session[]
 
   @@index([role])
+}
+
+/// A magic link. The emailed secret is never stored: only its SHA-256 hash is,
+/// so a leak of this table cannot be used to sign in as anybody. Single use,
+/// short lived, and every outstanding token for a user is burned once one of
+/// them is redeemed.
+model LoginToken {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 of the token that went out in the email. Unique so a redemption
+  /// is a single indexed lookup rather than a scan and compare.
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  /// Used to throttle how often links can be requested for one account.
+  @@index([userId, createdAt])
+}
+
+/// A signed-in browser. Same approach as LoginToken: the cookie holds the
+/// secret, the database holds only its hash.
+model Session {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------

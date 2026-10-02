@@ -66,10 +66,21 @@ async function main() {
     },
   })
 
+  // Both designers can sign in. Role.DESIGNER is what an admin surface will
+  // key off once there is one; today it mainly means these two are not the
+  // client.
   const davina = await prisma.user.create({
     data: {
       email: 'realestate@davinahughes.com',
       name: 'Davina Hughes',
+      role: Role.DESIGNER,
+    },
+  })
+
+  const jesse = await prisma.user.create({
+    data: {
+      email: 'jesse@dominatemoney.com',
+      name: 'Jesse Wood',
       role: Role.DESIGNER,
     },
   })
@@ -717,7 +728,12 @@ async function main() {
     milestones: await prisma.milestone.count(),
   }
 
-  console.log('Seeded', { project: project.displayName, client: abbie.name, designer: davina.name, ...counts })
+  console.log('Seeded', {
+    project: project.displayName,
+    client: abbie.name,
+    designers: [davina.name, jesse.name],
+    ...counts,
+  })
 }
 
 main()

@@ -23,6 +23,8 @@ export async function reset() {
     prisma.milestone.deleteMany(),
     prisma.room.deleteMany(),
     prisma.project.deleteMany(),
+    prisma.session.deleteMany(),
+    prisma.loginToken.deleteMany(),
     prisma.user.deleteMany(),
   ])
 }

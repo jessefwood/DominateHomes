@@ -1,41 +1,28 @@
-import { Role } from '@prisma/client'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { Role, type User } from '@prisma/client'
+import { SESSION_COOKIE, userForSessionToken } from './auth'
 import { prisma } from './db'
 
 /**
- * PLACEHOLDER SESSION.
- *
- * The sign-in approach is still an open decision, so nothing here authenticates
- * anybody. It resolves the client user so the screens can be built and reviewed
- * against real data, and it is the single place that has to change once auth is
- * chosen: every screen reads the current user through `currentUser()`.
- *
- * This must not reach production. `assertAuthConfigured()` is wired into the
- * layout so a production build with no auth fails loudly rather than quietly
- * serving the client's budget to the open internet.
+ * Reading who is signed in. Every screen goes through here.
  */
 
-export class AuthNotConfiguredError extends Error {
-  constructor() {
-    super(
-      'No authentication is configured. lib/session.ts is still the placeholder. ' +
-        'Choose and wire up a sign-in approach before deploying this anywhere public.',
-    )
-    this.name = 'AuthNotConfiguredError'
-  }
+export async function currentUser(): Promise<User | null> {
+  const jar = await cookies()
+  return userForSessionToken(jar.get(SESSION_COOKIE)?.value)
 }
 
-export const AUTH_IS_PLACEHOLDER = true
-
-export function assertAuthConfigured() {
-  if (AUTH_IS_PLACEHOLDER && process.env.NODE_ENV === 'production' && process.env.ALLOW_PLACEHOLDER_AUTH !== 'yes') {
-    throw new AuthNotConfiguredError()
-  }
+/** For anything behind the portal. Sends a signed-out visitor to sign in. */
+export async function requireUser(): Promise<User> {
+  const user = await currentUser()
+  if (!user) redirect('/signin')
+  return user
 }
 
-export async function currentUser() {
-  assertAuthConfigured()
-  const user = await prisma.user.findFirst({ where: { role: Role.CLIENT } })
-  if (!user) throw new Error('No client user found. Run the seed.')
+export async function requireDesigner(): Promise<User> {
+  const user = await requireUser()
+  if (user.role !== Role.DESIGNER) redirect('/')
   return user
 }
 
@@ -43,4 +30,19 @@ export async function currentProject() {
   const project = await prisma.project.findFirst({ orderBy: { createdAt: 'asc' } })
   if (!project) throw new Error('No project found. Run the seed.')
   return project
+}
+
+/**
+ * The base URL sign-in links are built from. Must be set in production: a link
+ * built from the wrong host is a link that does not work.
+ */
+export function appUrl(): string {
+  const configured = process.env.APP_URL
+  if (configured) return configured.replace(/\/$/, '')
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('APP_URL must be set in production so sign-in links point at the right host.')
+  }
+
+  return 'http://localhost:3000'
 }

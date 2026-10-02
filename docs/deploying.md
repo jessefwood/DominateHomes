@@ -27,23 +27,33 @@ On the app service, Variables tab:
 | Variable | Value |
 |---|---|
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
-| `ALLOW_PLACEHOLDER_AUTH` | `yes` — **temporary, see below** |
+| `APP_URL` | `https://portal.dominatehomes.com` |
+| `MAIL_FROM` | `Davina Hughes <davina@dominatehomes.com>` |
+| `RESEND_API_KEY` | from the Resend dashboard |
 
 The `${{Postgres.DATABASE_URL}}` syntax is a Railway reference. It stays
 correct if the database is ever rebuilt, so do not paste the literal URL.
 
 Do not set `PORT`. Railway injects it and `next start` reads it.
 
-### About that second variable
+`APP_URL` is what sign-in links are built from. If it is wrong, the emails
+contain links that do not work. The app refuses to start in production without
+it, and without both mail variables, rather than printing sign-in links into a
+log where they are useless to the client and readable by anyone with log
+access.
 
-`lib/session.ts` is a placeholder that authenticates nobody. A production
-build refuses to start without this flag, which is the point: it cannot ship
-by accident.
+### Email
 
-Setting it means **anyone with the URL sees the whole project, including the
-budget**. That is survivable while the only person with the URL is us. It is
-not survivable once the link is sent to Abbie. Delete this variable the day
-real sign-in lands, and do not send her the link before then.
+Sign-in is by emailed magic link, so mail has to work before anyone can get in.
+
+Resend does not need a separate account for this. Add `dominatehomes.com` as a
+sending domain in the existing account, verify it with the DNS records Resend
+provides, and create an API key. Only check whether the current plan caps the
+number of domains; that is the one thing that would force a second account or
+an upgrade.
+
+The DNS records Resend gives you go to Jesse along with the CNAME below. Until
+the domain verifies, sign-in emails will not send and nobody can get in.
 
 ## 4. Migrations
 

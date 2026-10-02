@@ -4,7 +4,7 @@ import { Card, OpenQuestion, PageHeader, Pill } from '@/components/ui'
 import { budgetTotals } from '@/lib/budget'
 import { prisma } from '@/lib/db'
 import { formatCents } from '@/lib/money'
-import { currentProject, currentUser } from '@/lib/session'
+import { currentProject, requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +25,7 @@ function daysUntil(date: Date | null) {
 }
 
 export default async function DashboardPage() {
-  const [user, project] = await Promise.all([currentUser(), currentProject()])
+  const [user, project] = await Promise.all([requireUser(), currentProject()])
 
   const [openItems, selections, totals, deadline] = await Promise.all([
     prisma.openItem.findMany({
