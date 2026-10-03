@@ -296,3 +296,48 @@ Dominate Homes`
 
   return { to, subject: `${clientName} ${what}`, text, html }
 }
+
+/**
+ * Telling a client there is something waiting for them.
+ *
+ * One email for the two things the design side does that need an answer: a
+ * question put to them, and a message on the thread. Written so it can be read
+ * on a phone in ten seconds and acted on, which is the whole job: the thing
+ * it replaces is a text message from Davina at nine at night.
+ *
+ * It deliberately carries the question itself rather than only a link. Most
+ * people read the email and nothing else, and a client who can answer in her
+ * head before she opens the portal is a client who opens the portal.
+ */
+export function clientNudgeEmail(
+  to: string,
+  name: string,
+  projectName: string,
+  headline: string,
+  body: string,
+  link: string,
+  linkLabel: string,
+): Email {
+  const firstName = name.split(' ')[0]
+
+  const text = `Hi ${firstName},
+
+${headline}
+
+${body}
+
+${link}
+
+${projectName}
+Dominate Homes`
+
+  const html = wrap(
+    projectName,
+    `<p style="${BODY}">Hi ${escapeHtml(firstName)}, ${escapeHtml(headline)}</p>
+      <p style="${BODY}white-space:pre-wrap;">${escapeHtml(body)}</p>
+      <p style="margin:0 0 20px;"><a href="${link}" style="${BUTTON}">${escapeHtml(linkLabel)}</a></p>
+      <p style="${QUIET}">Replying to this email reaches us too, if that is easier.</p>`,
+  )
+
+  return { to, subject: `${headline} · ${projectName}`, text, html }
+}

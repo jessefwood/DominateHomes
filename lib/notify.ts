@@ -1,6 +1,7 @@
 import { AuditAction, Role, type Project, type User } from '@prisma/client'
 import { prisma } from './db'
-import { accessRequestEmail, clientActivityEmail, mailer } from './mailer'
+import { accessRequestEmail, clientActivityEmail, clientNudgeEmail, mailer } from './mailer'
+import { reachableClients } from './open-items'
 import { appUrl } from './session'
 
 /**
@@ -113,5 +114,67 @@ export async function notifyDesignersOfAccessRequest(request: {
     await Promise.all(recipients.map((to) => send.send(accessRequestEmail(to, request, link))))
   } catch (error) {
     console.error('Could not send an access request email', error)
+  }
+}
+
+
+/**
+ * Telling the clients on a project that the design side needs them.
+ *
+ * The mirror of `notifyDesignersOfClientActivity`, and it was missing, which
+ * meant Davina could post a message or ask a question and the client would
+ * find out only by happening to open the portal. A thread nobody is told
+ * about is a thread nobody reads.
+ *
+ * Not throttled, unlike the designer-facing one, and the difference is
+ * deliberate. A client sending eleven photographs is one burst of one
+ * person's attention. Davina asking two questions in an afternoon is two
+ * things that each need an answer, and silently dropping the second one
+ * because the first was recent is how a client misses the question that holds
+ * up an order. The volume is low enough that honesty beats tidiness here.
+ *
+ * Only reaches clients who can actually sign in. See reachableClients.
+ */
+export async function notifyClientsOfDesignerActivity({
+  project,
+  headline,
+  body,
+  path,
+  linkLabel,
+}: {
+  project: Pick<Project, 'id' | 'displayName' | 'slug'>
+  /** Finishes "Hi Abbie, ...". Lowercase, no full stop. */
+  headline: string
+  /** The question or the message itself, so it can be read without clicking. */
+  body: string
+  path: string
+  linkLabel: string
+}): Promise<void> {
+  try {
+    const clients = await reachableClients(project.id)
+    if (clients.length === 0) return
+
+    const link = `${appUrl()}${path}`
+    const send = mailer()
+
+    await Promise.all(
+      clients.map((client) =>
+        send.send(
+          clientNudgeEmail(
+            client.email,
+            client.name,
+            project.displayName,
+            headline,
+            body,
+            link,
+            linkLabel,
+          ),
+        ),
+      ),
+    )
+  } catch (error) {
+    // Reported, never raised. Asking the question has to succeed whether or
+    // not the email about it does, or Davina loses the question too.
+    console.error('Could not send a client notification', error)
   }
 }

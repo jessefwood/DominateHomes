@@ -2,7 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { deleteMessage, MessageError, postMessage } from '@/lib/messages'
-import { alreadyNotifiedRecently, notifyDesignersOfClientActivity } from '@/lib/notify'
+import {
+  alreadyNotifiedRecently,
+  notifyClientsOfDesignerActivity,
+  notifyDesignersOfClientActivity,
+} from '@/lib/notify'
 import { isDesigner, requireProjectAccess } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
 
@@ -33,7 +37,19 @@ export async function send(projectSlug: string, body: string): Promise<Result> {
 
   if (!result.ok) return result
 
-  if (!quiet) {
+  if (isDesigner(user)) {
+    // The half that was missing. Davina could post to the thread and the
+    // client would find out only by happening to open the portal, which is
+    // not how anybody uses a portal. A thread nobody is told about is a
+    // thread nobody reads.
+    await notifyClientsOfDesignerActivity({
+      project,
+      headline: `${user.name.split(' ')[0]} has sent you a message about the house`,
+      body: body.trim(),
+      path: `/portal/${project.slug}/messages`,
+      linkLabel: 'Read it and reply',
+    })
+  } else if (!quiet) {
     await notifyDesignersOfClientActivity({
       actor: user,
       project,

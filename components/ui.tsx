@@ -27,17 +27,24 @@ export function PageHeader({
 
 export function Card({
   href,
+  id,
   children,
   className = '',
 }: {
   href?: string
+  /** For linking straight to one card, e.g. an open item from an email. */
+  id?: string
   children: React.ReactNode
   className?: string
 }) {
   const base = `hairline overflow-hidden rounded-xl border bg-page shadow-sheet ${className}`
-  if (!href) return <div className={base}>{children}</div>
+  if (!href) return <div id={id} className={base}>{children}</div>
   return (
-    <Link href={href} className={`${base} block transition-shadow duration-200 hover:shadow-lifted`}>
+    <Link
+      id={id}
+      href={href}
+      className={`${base} block transition-shadow duration-200 hover:shadow-lifted`}
+    >
       {children}
     </Link>
   )

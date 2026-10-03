@@ -40,7 +40,7 @@ export default async function OpenItemsPage({
 
           <div className="space-y-3">
             {hers.map((item) => (
-              <Card key={item.id} className="p-4">
+              <Card key={item.id} id={`item-${item.id}`} className="scroll-mt-24 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-medium text-ink">{item.title}</p>
                   {item.blocksOrdering && item.status === OpenItemStatus.OPEN ? (
@@ -75,7 +75,7 @@ export default async function OpenItemsPage({
           ) : (
             <div className="space-y-3">
               {davinas.map((item) => (
-                <Card key={item.id} className="p-4">
+                <Card key={item.id} id={`item-${item.id}`} className="scroll-mt-24 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-medium text-ink">{item.title}</p>
                     {item.status !== OpenItemStatus.OPEN ? <Pill tone="sea">Done</Pill> : null}

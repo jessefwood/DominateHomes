@@ -2,9 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Phase } from '@prisma/client'
 import { EditForm } from '@/components/edit-form'
-import { Card, PageHeader, Photo, PhotoMissing, SectionHeading } from '@/components/ui'
+import { OpenItemOwner, OpenItemStatus } from '@prisma/client'
+import { Card, EmptyState, PageHeader, Photo, PhotoMissing, Pill, SectionHeading } from '@/components/ui'
 import { prisma } from '@/lib/db'
+import { openItemsFor } from '@/lib/open-items'
 import { saveArtPiece, saveProject } from '../actions'
+import { AskClient, ItemState } from './asks'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +31,15 @@ export default async function EditProject({ params }: { params: Promise<{ slug: 
   })
 
   if (!project) notFound()
+
+  const openItems = await openItemsFor(project.id)
+  const askedOfHer = openItems.filter(
+    (item) => item.owner === OpenItemOwner.CLIENT && item.status === OpenItemStatus.OPEN,
+  )
+  const answered = openItems.filter((item) => item.status !== OpenItemStatus.OPEN)
+  const ourOwn = openItems.filter(
+    (item) => item.owner === OpenItemOwner.DESIGNER && item.status === OpenItemStatus.OPEN,
+  )
 
   return (
     <div className="space-y-10">
@@ -119,6 +131,115 @@ export default async function EditProject({ params }: { params: Promise<{ slug: 
           />
         </div>
       </Card>
+
+      {/* ---------------------------------------------------------------
+          Talking to the client. This is the part that was missing: open
+          items drove two numbers on her dashboard and could be answered, but
+          nothing anywhere could create one, so asking her something meant a
+          text message and an answer that lived in a phone.
+          --------------------------------------------------------------- */}
+      <section className="space-y-4">
+        <SectionHeading
+          title="Ask the client something"
+          action={
+            <Link
+              href={`/portal/${project.slug}/messages`}
+              className="text-sm text-driftwood hover:text-ink"
+            >
+              Or message them
+            </Link>
+          }
+        />
+
+        <Card className="p-5">
+          <AskClient slug={project.slug} />
+        </Card>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeading
+          title="Waiting on the client"
+          action={
+            askedOfHer.length > 0 ? (
+              <Pill tone="clay">{askedOfHer.length}</Pill>
+            ) : (
+              <span className="text-sm text-driftwood">Nothing outstanding</span>
+            )
+          }
+        />
+
+        {askedOfHer.length === 0 ? (
+          <EmptyState>
+            Nothing is waiting on them. Anything you ask above shows up here until it is answered.
+          </EmptyState>
+        ) : (
+          <Card className="divide-y divide-ink/10">
+            {askedOfHer.map((item) => (
+              <div key={item.id} className="p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <p className="min-w-0 font-medium text-ink">{item.title}</p>
+                  {item.blocksOrdering ? <Pill tone="clay">Holds up ordering</Pill> : null}
+                </div>
+                {item.detail ? (
+                  <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-driftwood-deep">
+                    {item.detail}
+                  </p>
+                ) : null}
+                <div className="mt-2">
+                  <ItemState slug={project.slug} itemId={item.id} closed={false} />
+                </div>
+              </div>
+            ))}
+          </Card>
+        )}
+      </section>
+
+      {ourOwn.length > 0 ? (
+        <section className="space-y-4">
+          <SectionHeading title="Waiting on us" action={<Pill>{ourOwn.length}</Pill>} />
+          <Card className="divide-y divide-ink/10">
+            {ourOwn.map((item) => (
+              <div key={item.id} className="p-4">
+                <p className="font-medium text-ink">{item.title}</p>
+                {item.detail ? (
+                  <p className="mt-1 text-sm leading-relaxed text-driftwood-deep">{item.detail}</p>
+                ) : null}
+                <div className="mt-2">
+                  <ItemState slug={project.slug} itemId={item.id} closed={false} />
+                </div>
+              </div>
+            ))}
+          </Card>
+        </section>
+      ) : null}
+
+      {answered.length > 0 ? (
+        <section className="space-y-4">
+          <SectionHeading title="Answered and closed" action={<Pill>{answered.length}</Pill>} />
+          <Card className="divide-y divide-ink/10">
+            {answered.map((item) => (
+              <div key={item.id} className="p-4">
+                <p className="text-sm text-ink">{item.title}</p>
+                {item.answer ? (
+                  <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-driftwood-deep">
+                    &ldquo;{item.answer}&rdquo;
+                    {item.answeredBy ? (
+                      <span className="text-driftwood"> &middot; {item.answeredBy.name}</span>
+                    ) : null}
+                  </p>
+                ) : null}
+                <div className="mt-2">
+                  <ItemState
+                    slug={project.slug}
+                    itemId={item.id}
+                    closed={item.status === OpenItemStatus.CLOSED}
+                  />
+                </div>
+              </div>
+            ))}
+          </Card>
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         <SectionHeading
