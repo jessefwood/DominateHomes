@@ -93,12 +93,18 @@ export function mailer(): Mailer {
 }
 
 /** The sign-in email itself. Written the way Davina talks. */
-export function signInEmail(to: string, name: string, link: string, minutes: number): Email {
+export function signInEmail(
+  to: string,
+  name: string,
+  link: string,
+  minutes: number,
+  projectName: string,
+): Email {
   const firstName = name.split(' ')[0]
 
   const text = `Hi ${firstName},
 
-Here is your link to open the Plan 643 Bianca PSL portal.
+Here is your link to open the ${projectName} portal.
 
 ${link}
 
@@ -114,7 +120,7 @@ Dominate Homes`
   <body style="margin:0;padding:24px;background:#faf8f4;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1a17;">
     <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid rgba(28,26,23,0.12);border-radius:8px;padding:28px;">
       <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#8a7f70;">Dominate Homes</p>
-      <h1 style="margin:0 0 16px;font-family:Georgia,serif;font-size:22px;font-weight:normal;">Plan 643 Bianca PSL</h1>
+      <h1 style="margin:0 0 16px;font-family:Georgia,serif;font-size:22px;font-weight:normal;">${projectName}</h1>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Hi ${firstName}, here is your link to open the portal.</p>
       <p style="margin:0 0 20px;">
         <a href="${link}" style="display:inline-block;background:#1c1a17;color:#faf8f4;text-decoration:none;padding:11px 20px;border-radius:6px;font-size:15px;">Open the portal</a>
@@ -125,5 +131,5 @@ Dominate Homes`
   </body>
 </html>`
 
-  return { to, subject: 'Your link to the Plan 643 Bianca PSL portal', text, html }
+  return { to, subject: `Your link to the ${projectName} portal`, text, html }
 }

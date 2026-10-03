@@ -84,7 +84,13 @@ export async function requestSignInLink(rawEmail: string, baseUrl: string): Prom
   })
 
   const link = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${encodeURIComponent(token)}`
-  await mailer().send(signInEmail(user.email, user.name, link, TOKEN_TTL_MINUTES))
+
+  // The email names the project, read from the database so a rename is data
+  // rather than a deploy.
+  const project = await prisma.project.findFirst({ orderBy: { createdAt: 'asc' } })
+  const projectName = project?.displayName ?? 'Dominate Homes'
+
+  await mailer().send(signInEmail(user.email, user.name, link, TOKEN_TTL_MINUTES, projectName))
 
   return { sent: true, user, token }
 }

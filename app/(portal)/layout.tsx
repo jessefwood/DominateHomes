@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireUser } from '@/lib/session'
+import { currentProject, requireUser } from '@/lib/session'
 
 /**
  * Everything inside this route group is behind sign-in. `requireUser` redirects
@@ -21,13 +21,13 @@ const NAV = [
 ]
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireUser()
+  const [user, project] = await Promise.all([requireUser(), currentProject()])
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row lg:gap-12 lg:px-8">
       <aside className="lg:w-56 lg:shrink-0">
         <Link href="/" className="block">
-          <p className="font-display text-xl leading-tight text-ink">Plan 643 Bianca PSL</p>
+          <p className="font-display text-xl leading-tight text-ink">{project.displayName}</p>
           <p className="mt-1 text-xs tracking-wide text-driftwood uppercase">Dominate Homes</p>
         </Link>
 

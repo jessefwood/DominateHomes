@@ -148,8 +148,8 @@ export default async function DashboardPage() {
       </section>
 
       <OpenQuestion>
-        The house still has no street address, so everything refers to it as Plan 643 Bianca PSL until GL assigns
-        a lot number. The great room TV wall is also unresolved.
+        GL still has not assigned a street address or a lot number, which we need before anyone can schedule a
+        delivery or measure for blinds. The great room TV wall is also unresolved.
       </OpenQuestion>
     </div>
   )

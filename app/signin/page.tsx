@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/db'
 import { currentUser } from '@/lib/session'
 import { SignInForm } from './form'
 
@@ -18,6 +19,7 @@ export default async function SignInPage({
 }) {
   if (await currentUser()) redirect('/')
 
+  const project = await prisma.project.findFirst({ orderBy: { createdAt: 'asc' } })
   const { problem } = await searchParams
   const message = problem ? PROBLEM[problem] : null
 
@@ -25,7 +27,7 @@ export default async function SignInPage({
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
       <div className="hairline rounded-lg border bg-white p-7">
         <p className="text-xs tracking-widest text-driftwood uppercase">Dominate Homes</p>
-        <h1 className="font-display mt-1 text-2xl leading-tight text-ink">Plan 643 Bianca PSL</h1>
+        <h1 className="font-display mt-1 text-2xl leading-tight text-ink">{project?.displayName ?? 'Your project'}</h1>
 
         {message ? (
           <p className="mt-4 rounded-md bg-clay-wash p-3 text-sm leading-relaxed text-driftwood-deep">

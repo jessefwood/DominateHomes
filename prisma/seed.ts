@@ -90,10 +90,12 @@ async function main() {
   // -------------------------------------------------------------------------
   const project = await prisma.project.create({
     data: {
-      slug: 'plan-643-bianca-psl',
-      // GL Homes has not assigned a street address. This label is what appears
-      // everywhere, client facing included, until a lot number comes through.
-      displayName: 'Plan 643 Bianca PSL',
+      slug: '643-bianca',
+      // The project's name, used everywhere including client facing. GL Homes
+      // still has not issued a street address, so addressLine stays null: this
+      // name is what the project is called, not a claim about its postal
+      // address. Set addressLine when GL assigns the lot number.
+      displayName: '643 Bianca',
       addressLine: null,
       community: 'Valencia Parc at Riverland, Port St. Lucie, FL',
       planName: 'GL Homes, Plan 643 Bianca, Vintage Collection',

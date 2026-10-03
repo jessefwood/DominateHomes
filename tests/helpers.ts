@@ -37,7 +37,7 @@ export async function fixture() {
   const project = await prisma.project.create({
     data: {
       slug: `p-${Date.now()}`,
-      displayName: 'Plan 643 Bianca PSL',
+      displayName: '643 Bianca',
       community: 'Test',
       planName: 'Bianca',
       acSqFt: 2799,
