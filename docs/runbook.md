@@ -24,45 +24,80 @@ at verification and at catching things that are wrong in the real world.
 Those four are human. Write them as instructions for Davina or Jesse with
 exact values, and give Cowork the verification afterwards.
 
-## DNS: the rules that stop something breaking
+## DNS
 
-DNS for `dominatehomes.com` lives in **Centerfy (GoHighLevel)**. Not
-Cloudflare. Cloudflare shows the domain as "Invalid nameservers" and that is
-correct and expected, because it was never delegated there.
+**Correcting what this file said before.** It stated that DNS lives in Centerfy
+(GoHighLevel) and that Cloudflare showing "Invalid nameservers" was expected
+because the domain was never delegated there. **That was wrong**, and it sent
+two people down the wrong road for an hour. It is recorded rather than quietly
+deleted because the way it was wrong is instructive: a vendor panel showing
+real records is not proof that the vendor is authoritative.
 
-**Never change nameservers.**
+**The actual picture, from the registry and the delegation:**
 
-**Never touch the MX records.** They are five Google rows: the company email
-is Gmail, on `info@dominatehomes.com`. That address is also the portal's
-sending identity, so every client sign-in link goes out as it. Breaking those
-rows stops company email and client logins in one move.
+    Registrar      Cloudflare, Inc.
+    Nameservers    braden.ns.cloudflare.com
+                   love.ns.cloudflare.com
+    Registered     2024-05-14
+    Status         client transfer prohibited
 
-**A root CNAME is not safe on this domain.** A CNAME at the root cannot
-coexist with other records for the same name, and this root carries the five
-MX rows plus two TXT rows. Railway asks for exactly that when you add the
-apex. Use an ALIAS or ANAME if the provider has one, or domain forwarding, but
-never a plain CNAME at the root here.
+`dominatehomes.com` is **registered at Cloudflare and served by Cloudflare**.
+Centerfy is a window onto a zone that lives in a Cloudflare account. It only
+ever offered A, CNAME, AAAA, TXT and MX because that is what its panel exposes,
+not what the zone supports.
 
-**The SPF record is malformed and should be fixed.** It currently reads:
+The "Invalid nameservers" warning on Davina's own Cloudflare account was not a
+misconfiguration. She added the domain to a **different** account than the one
+holding the zone, and got a different nameserver pair. **There is no migration
+to do and no nameserver change to make.** The open question is a human one:
+which Cloudflare login holds this domain. Given the 2024 registration it is
+likely an older account or a contractor's.
 
-    v=spf1 include:dc-aa8e722993._spfm.dominatehomes.com ~all include:amazonses.com ~all
+`client transfer prohibited` is an ordinary registrar lock. It blocks nothing
+we want and should stay on.
 
-SPF is evaluated left to right and `all` always matches, so evaluation stops
-at the first `~all`. Everything after it, including `include:amazonses.com`,
-is dead. A record may have only one `all`, at the end. The corrected form is:
+**Still true, and the reason for all the caution:** the five Google MX rows are
+company email on `info@dominatehomes.com`, which is also the portal's sending
+identity. Breaking them stops company email and client logins together.
+Screenshot before editing. Never let a "Connect a domain" wizard "resolve
+conflicts" on this zone: Centerfy's flow offered to delete all five MX rows and
+the SPF row as conflicting.
 
-    v=spf1 include:dc-aa8e722993._spfm.dominatehomes.com include:amazonses.com ~all
+**The apex.** `dominatehomes.com` has `A @ 162.159.140.166`, a Cloudflare
+anycast address, so it already terminates on Cloudflare with a valid
+certificate and simply has no rule behind it. The fix is a Cloudflare Redirect
+Rule sending `dominatehomes.com/*` to `https://www.dominatehomes.com/$1`. No
+CNAME at the apex, no MX conflict, nothing near the Google rows. A root CNAME
+is still the wrong answer here and Railway will still ask for one.
 
-This has not broken sign-in links so far because Resend signs with DKIM and
-DMARC is `p=none`, so nothing is being rejected. It is still a real
-deliverability risk: the thing at stake is a client being unable to log in
-because the link went to spam.
+**Live record set**, as published:
 
-Screenshot the zone before editing it.
+    A      @                        162.159.140.166
+    MX     @                        1 aspmx.l.google.com
+    MX     @                        5 alt1.aspmx.l.google.com
+    MX     @                        5 alt2.aspmx.l.google.com
+    MX     @                        10 alt3.aspmx.l.google.com
+    MX     @                        10 alt4.aspmx.l.google.com
+    TXT    @                        v=spf1 include:dc-aa8e722993._spfm.dominatehomes.com include:amazonses.com ~all
+    TXT    @                        google-site-verification=...
+    CNAME  www                      czdhvmac.up.railway.app
+    CNAME  project                  1gxax62r.up.railway.app
+    CNAME  rsend                    rsend.forge.rmta.net
+    CNAME  send                     send.forge.rmta.net
+    TXT    _dmarc                   v=DMARC1; p=none
+    TXT    dc-aa8e722993._spfm      v=spf1 include:_spf.google.com ~all
+    TXT    resend._domainkey        (DKIM)
+    TXT    _railway-verify          railway-verify=1329a364...
+    TXT    _railway-verify.www      railway-verify=e9fdbbdd...
+    TXT    _railway-verify.project  railway-verify=ae2ff4f6...
 
-Railway always needs **two** records for a domain, not one: the CNAME or A
-record, plus a `_railway-verify` TXT. The certificate does not issue without
-the TXT.
+The site is served from `www.dominatehomes.com`. `portal.dominatehomes.com` is
+retired; `APP_URL` was moved to the new host before it was removed, which is
+the only safe order, because every outstanding sign-in link points at whatever
+`APP_URL` was when it was issued.
+
+`project.dominatehomes.com` is the older Grossman portal, still live on its own
+Railway service. Retire it deliberately when that work folds into this app.
 
 ## Railway
 
