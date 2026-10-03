@@ -12,12 +12,15 @@ const PROBLEM: Record<string, string> = {
   missing: 'That link was incomplete. Ask for a new one.',
 }
 
+/** Private. A client's budget has no business in a search index. */
+export const metadata = { robots: { index: false, follow: false } }
+
 export default async function SignInPage({
   searchParams,
 }: {
   searchParams: Promise<{ problem?: string }>
 }) {
-  if (await currentUser()) redirect('/')
+  if (await currentUser()) redirect('/portal')
 
   const project = await prisma.project.findFirst({ orderBy: { createdAt: 'asc' } })
   const { problem } = await searchParams

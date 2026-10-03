@@ -135,15 +135,48 @@ export async function addOption(selectionId: string, option: OptionDraft) {
   })
 }
 
+/** Statuses past the point where a pick can still be changed. */
+const LOCKED_STATUSES: SelectionStatus[] = [
+  SelectionStatus.APPROVED,
+  SelectionStatus.ORDERED,
+  SelectionStatus.RECEIVED,
+]
+
+export class SelectionLockedError extends Error {
+  constructor(name: string, status: SelectionStatus) {
+    super(
+      `${name} cannot be changed because it is already ${status.toLowerCase()}. ` +
+        'Approved items are signed off at a fixed price and ordered against that record. ' +
+        'Ask Davina if something needs to change.',
+    )
+    this.name = 'SelectionLockedError'
+  }
+}
+
+async function assertChangeable(selectionId: string) {
+  const selection = await prisma.selection.findUniqueOrThrow({
+    where: { id: selectionId },
+    select: { name: true, status: true },
+  })
+
+  if (LOCKED_STATUSES.includes(selection.status)) {
+    throw new SelectionLockedError(selection.name, selection.status)
+  }
+}
+
 /**
  * Records her pick. The composite foreign key on Selection means the slot must
  * belong to this item's own options, so this cannot store a choice that points
  * at some other item's row.
  *
  * Choosing is not approving. Status moves to CHOSEN, and nothing orders until
- * the room is signed off on the approvals screen.
+ * the room is signed off on the approvals screen. Once it is signed off the
+ * pick locks, because the approval snapshotted a price against that exact
+ * option and changing it underneath would make the record a lie.
  */
 export async function chooseOption(selectionId: string, slot: OptionSlot) {
+  await assertChangeable(selectionId)
+
   return prisma.selection.update({
     where: { id: selectionId },
     data: { chosenSlot: slot, chosenAt: new Date(), status: SelectionStatus.CHOSEN },
@@ -151,8 +184,10 @@ export async function chooseOption(selectionId: string, slot: OptionSlot) {
   })
 }
 
-/** Clears a pick so she can change her mind before the room is approved. */
+/** Clears a pick so she can change her mind, up until the room is approved. */
 export async function clearChoice(selectionId: string) {
+  await assertChangeable(selectionId)
+
   return prisma.selection.update({
     where: { id: selectionId },
     data: { chosenSlot: null, chosenAt: null, status: SelectionStatus.PENDING },

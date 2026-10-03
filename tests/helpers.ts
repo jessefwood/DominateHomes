@@ -1,3 +1,6 @@
+// Tests read the same .env the app does. An inline DATABASE_URL still wins,
+// because dotenv does not override variables that are already set.
+import 'dotenv/config'
 import { BudgetState, BudgetType, Phase, PrismaClient, Role, RoomTier } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
@@ -23,6 +26,8 @@ export async function reset() {
     prisma.milestone.deleteMany(),
     prisma.room.deleteMany(),
     prisma.project.deleteMany(),
+    prisma.projectMember.deleteMany(),
+    prisma.integration.deleteMany(),
     prisma.session.deleteMany(),
     prisma.loginToken.deleteMany(),
     prisma.user.deleteMany(),

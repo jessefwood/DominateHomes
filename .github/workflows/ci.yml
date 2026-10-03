@@ -29,6 +29,9 @@ jobs:
       # Sign-in links are not sent in CI. Unset RESEND_API_KEY means the console
       # mailer, which is what the build and tests expect.
       APP_URL: http://localhost:3000
+      # Not a real key. Credential encryption needs one present to be
+      # exercised at all, and CI never talks to a live Stripe or Resend.
+      CREDENTIAL_KEY: ci-only-not-a-real-key-0123456789abcdef
 
     steps:
       - uses: actions/checkout@v4

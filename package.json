@@ -8,14 +8,17 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start",
+    "start": "prisma migrate deploy && next start",
     "lint": "eslint",
     "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
     "db:seed": "prisma db seed",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
     "start:prod": "prisma migrate deploy && next start",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "options:template": "tsx scripts/options-template.ts",
+    "options:import": "tsx scripts/options-import.ts",
+    "start:next": "next start"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

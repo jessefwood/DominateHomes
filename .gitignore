@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Keep the template committed; real .env files stay out.
 !.env.example
+
+# Working file for loading selection options. Generated, not source.
+options.csv
