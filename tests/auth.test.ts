@@ -15,7 +15,7 @@ import { prisma, reset } from './helpers'
 const BASE = 'https://portal.dominatehomes.com'
 
 async function makeUser(email = 'abbie@example.invalid') {
-  return prisma.user.create({ data: { email, name: 'Abbie Grossman', role: Role.CLIENT } })
+  return prisma.user.create({ data: { email, name: 'Abbie Tigges', role: Role.CLIENT } })
 }
 
 describe('magic link sign-in', () => {
@@ -37,7 +37,7 @@ describe('magic link sign-in', () => {
     const user = await prisma.user.create({
       data: {
         email: 'client@example.invalid',
-        name: 'Abbie Grossman',
+        name: 'Abbie Tigges',
         role: Role.CLIENT,
         signInEnabled: false,
       },
@@ -53,7 +53,7 @@ describe('magic link sign-in', () => {
     const user = await prisma.user.create({
       data: {
         email: 'client2@example.invalid',
-        name: 'Abbie Grossman',
+        name: 'Abbie Tigges',
         role: Role.CLIENT,
         signInEnabled: false,
       },

@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/ui'
-import { credentialKeyConfigured } from '@/lib/crypto'
+import { configuredCredentialKey, credentialKeyProblem, KEY_PROBLEM_DETAIL } from '@/lib/crypto'
 import { listIntegrations } from '@/lib/integrations'
 import { IntegrationPanel, type PanelData } from './panel'
 
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function IntegrationsPage() {
   const integrations = await listIntegrations()
-  const keyReady = credentialKeyConfigured()
+  const keyProblem = credentialKeyProblem(configuredCredentialKey())
 
   const panels: PanelData[] = integrations.map((entry) => ({
     kind: entry.kind,
@@ -23,6 +23,7 @@ export default async function IntegrationsPage() {
     lastCheckedAt: entry.lastCheckedAt ? entry.lastCheckedAt.toISOString() : null,
     lastCheckOk: entry.lastCheckOk,
     lastCheckNote: entry.lastCheckNote,
+    managedElsewhere: entry.managedElsewhere,
   }))
 
   return (
@@ -33,15 +34,27 @@ export default async function IntegrationsPage() {
         intro="Connect the outside services the portal uses. Paste a key once and it is encrypted before it is stored. Nothing here is shown again afterwards."
       />
 
-      {!keyReady ? (
+      {keyProblem ? (
         <div className="rounded-md border border-clay/30 bg-clay-wash p-4">
           <p className="font-medium text-clay-deep">This server cannot store keys safely yet</p>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-driftwood-deep">
-            CREDENTIAL_KEY is not set in the hosting environment, so there is nothing to encrypt with and
-            saving a key will be refused rather than stored in the clear. Generate one with{' '}
-            <code className="font-mono text-xs">openssl rand -base64 32</code> and add it as a variable in
-            Railway, then reload this page.
+            {KEY_PROBLEM_DETAIL[keyProblem]} Saving a key here is refused rather than stored under
+            something that is not a secret.
           </p>
+          <ol className="mt-3 max-w-2xl space-y-1.5 text-sm leading-relaxed text-driftwood-deep">
+            <li>
+              1. Run this in a terminal:{' '}
+              <code className="font-mono text-xs">openssl rand -base64 32</code>
+            </li>
+            <li>
+              2. It prints 44 characters ending in <code className="font-mono text-xs">=</code>.
+              That printed line is the value, not the command.
+            </li>
+            <li>
+              3. In Railway, set <code className="font-mono text-xs">CREDENTIAL_KEY</code> to it,
+              redeploy, then reload this page. The warning goes away only once the value is right.
+            </li>
+          </ol>
         </div>
       ) : null}
 
@@ -52,9 +65,10 @@ export default async function IntegrationsPage() {
       </div>
 
       <p className="max-w-2xl text-sm leading-relaxed text-driftwood">
-        Encrypting a key protects it if the database is ever read or copied. It cannot protect it from someone
-        who gets into the running server, because the server has to decrypt the key in order to use it. If a
-        key is ever exposed, roll it in Stripe or Resend and paste the new one here.
+        Encrypting a key protects it if the database is ever read or copied. It cannot protect it
+        from someone who gets into the running server, because the server has to decrypt the key in
+        order to use it. If a key is ever exposed, roll it in Stripe or Resend and paste the new one
+        here.
       </p>
     </div>
   )

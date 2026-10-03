@@ -17,44 +17,59 @@
  * Sage carries status and anything chosen or approved. Rust is the accent and
  * is reserved for things that are genuinely unresolved, so it keeps meaning.
  *
+ * The page itself is white. The warm neutrals did not disappear, they moved:
+ * oyster and sand are now the tone you get when something is deliberately set
+ * back from the page, which is what gives a white layout its depth. A
+ * photograph of a room also sits truer on white than on a beige, and the
+ * portal is largely photographs of rooms.
+ *
  * Separate from the house palette. The approved direction for the house is
  * sand, oyster and driftwood with sea glass as the only real colour. This is
  * the portal's own skin.
  */
 @theme {
+  --color-page: #ffffff;
   /* Alabaster SW 7008 */
-  --color-oyster: #f2efe6;
-  --color-oyster-deep: #e9e4d7;
+  --color-oyster: #f6f4ee;
+  --color-oyster-deep: #ece8dd;
   /* Accessible Beige SW 7036 */
   --color-sand: #ded5c6;
   --color-sand-deep: #cabfab;
   /* Urbane Bronze SW 7048, lightened for secondary text */
-  --color-driftwood: #857f73;
-  --color-driftwood-deep: #5c574d;
+  --color-driftwood: #7d776b;
+  --color-driftwood-deep: #555047;
   /* Urbane Bronze SW 7048 */
-  --color-ink: #3b3a34;
+  --color-ink: #2f2e29;
   /* Evergreen Fog SW 9130 */
   --color-seaglass: #95978a;
   /* Clary Sage SW 6178 */
   --color-seaglass-deep: #5f6b55;
-  --color-seaglass-wash: #e4e7dd;
+  --color-seaglass-wash: #eceee6;
   /* Cavern Clay SW 7701 */
   --color-clay: #a9694c;
   --color-clay-deep: #8a5139;
-  --color-clay-wash: #f3e7e0;
+  --color-clay-wash: #f8efe9;
 
   /* Loaded in app/layout.tsx by next/font, so these resolve to self-hosted
      files rather than a request to Google on every page view. */
   --font-display: var(--font-display-face), ui-serif, Georgia, serif;
   --font-sans: var(--font-text-face), ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * Two shadows and no more. Anything heavier reads as a web app, and the
+   * thing being imitated is print. The lift is what separates a card from the
+   * white page now that there is no beige doing it.
+   */
+  --shadow-sheet: 0 1px 2px rgba(47, 46, 41, 0.04), 0 1px 14px rgba(47, 46, 41, 0.05);
+  --shadow-lifted: 0 2px 6px rgba(47, 46, 41, 0.06), 0 10px 32px rgba(47, 46, 41, 0.08);
 }
 
 html {
-  background: var(--color-oyster);
+  background: var(--color-page);
 }
 
 body {
-  background: var(--color-oyster);
+  background: var(--color-page);
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -83,5 +98,34 @@ body {
 
 /* Thin deliberate lines. Never a heavy border. */
 .hairline {
-  border-color: color-mix(in srgb, var(--color-ink) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+}
+
+/*
+ * Focus. Keyboard only, so a mouse user never sees a ring, and warm rather
+ * than the browser default blue, which is the single thing that most makes a
+ * careful layout look unfinished.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-seaglass-deep);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/*
+ * A photograph on a white page needs an edge or it bleeds into the paper.
+ * One hairline inset, drawn inside the image so it survives rounded corners.
+ */
+.photo-frame {
+  position: relative;
+  background: var(--color-oyster);
+  overflow: hidden;
+}
+
+.photo-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 9%, transparent);
+  pointer-events: none;
 }

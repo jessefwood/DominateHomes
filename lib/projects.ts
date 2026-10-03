@@ -51,11 +51,34 @@ export async function requireProjectAccess(user: User, slug: string): Promise<Pr
   return project
 }
 
-/** True when there is exactly one project to show, so a picker is pointless. */
-export async function soleProjectFor(user: User): Promise<Project | null> {
-  const projects = await projectsForUser(user)
-  return projects.length === 1 ? projects[0] : null
+/**
+ * How the client on a project is named, for telling a designer whose view they
+ * are looking at.
+ *
+ * Every screen under /portal is written to the client in the second person.
+ * Read by Davina those screens say "waiting on you" and "waiting on Davina" on
+ * the same row, which reads as a bug rather than as someone else's view. The
+ * copy is right and should not change, so the fix is to label the view.
+ */
+export async function clientLabelFor(projectId: string): Promise<string | null> {
+  const member = await prisma.projectMember.findFirst({
+    where: { projectId, user: { role: Role.CLIENT } },
+    orderBy: { createdAt: 'asc' },
+    include: { user: { select: { name: true } } },
+  })
+
+  if (!member) return null
+
+  return member.label ?? member.user.name
 }
+
+// There is deliberately no soleProjectFor() here any more. It answered "is
+// there exactly one project", and the only thing that question was ever used
+// for was skipping the list and dropping somebody straight into that project.
+// That behaviour was removed on purpose: arriving inside a project gives no
+// sense of where you are or that there is anything above it. See the note in
+// app/portal/page.tsx. The helper outlived its caller and was a standing
+// invitation to put the pass-through back.
 
 /**
  * Guards a write.

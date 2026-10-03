@@ -6,6 +6,14 @@ import { ImageResponse } from 'next/og'
  * the palette and never goes missing from the repo.
  */
 
+const MARK =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 18">' +
+      '<path d="M1.2 15.8h4.3V9a6.5 6.5 0 0 1 13 0v6.8h4.3" fill="none" stroke="#3b3a34" ' +
+      'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  )
+
 export const alt = 'Dominate Homes, furnishing new builds, Chesapeake Virginia'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
@@ -26,16 +34,19 @@ export default async function Image() {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div
-            style={{
-              fontSize: 22,
-              letterSpacing: 6,
-              textTransform: 'uppercase',
-              color: '#857f73',
-              fontFamily: 'sans-serif',
-            }}
-          >
-            Dominate Homes
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <img src={MARK} width={64} height={45} alt="" />
+            <div
+              style={{
+                fontSize: 22,
+                letterSpacing: 6,
+                textTransform: 'uppercase',
+                color: '#857f73',
+                fontFamily: 'sans-serif',
+              }}
+            >
+              Dominate Homes
+            </div>
           </div>
           <div style={{ fontSize: 76, color: '#3b3a34', marginTop: 28, lineHeight: 1.1, maxWidth: 900 }}>
             A finished house, not a folder of ideas.

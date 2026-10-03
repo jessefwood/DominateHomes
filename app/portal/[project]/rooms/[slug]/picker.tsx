@@ -25,6 +25,8 @@ export type PickableOption = {
   leadTimeDays: number | null
   dimensions: string | null
   nonReturnable: boolean
+  photoUrl: string | null
+  productUrl: string | null
 }
 
 /**
@@ -78,8 +80,11 @@ export function OptionPicker({
             return (
               <div
                 key={slot}
-                className="hairline rounded-md border border-dashed bg-oyster-deep/40 p-3 text-sm text-driftwood"
+                className="hairline rounded-md border border-dashed bg-oyster/60 p-3 text-sm text-driftwood"
               >
+                <div className="hairline mb-3 flex aspect-[4/3] items-center justify-center rounded-md border border-dashed">
+                  <span className="text-xs text-driftwood">Still to come</span>
+                </div>
                 <p className="text-xs tracking-widest text-driftwood uppercase">Option {slot}</p>
                 <p className="mt-2 leading-relaxed">Davina is still putting this one together.</p>
               </div>
@@ -90,9 +95,25 @@ export function OptionPicker({
             <div
               key={slot}
               className={`flex flex-col rounded-md border p-3 text-sm ${
-                chosen ? 'border-seaglass bg-seaglass-wash' : 'hairline border bg-white'
+                chosen ? 'border-seaglass bg-seaglass-wash' : 'hairline border bg-page'
               }`}
             >
+              {option.photoUrl ? (
+                <div className="photo-frame mb-3 aspect-[4/3] rounded-md">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={option.photoUrl}
+                    alt={option.label}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="hairline mb-3 flex aspect-[4/3] items-center justify-center rounded-md border border-dashed bg-oyster/60">
+                  <span className="text-xs text-driftwood">No photo yet</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <p className="text-xs tracking-widest text-driftwood uppercase">Option {slot}</p>
                 {chosen ? <Pill tone="sea">Your pick</Pill> : null}
@@ -105,6 +126,16 @@ export function OptionPicker({
                 <p className="mt-1 text-driftwood">About {option.leadTimeDays} days to arrive</p>
               ) : null}
               {option.dimensions ? <p className="mt-1 text-driftwood">{option.dimensions}</p> : null}
+              {option.productUrl ? (
+                <a
+                  href={option.productUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="mt-2 text-driftwood underline underline-offset-2 transition-colors hover:text-ink"
+                >
+                  See it at {option.vendor}
+                </a>
+              ) : null}
               {option.nonReturnable ? (
                 <p className="mt-2 text-xs leading-relaxed text-clay-deep">
                   Made to order, so it cannot be returned once the vendor confirms it.
@@ -126,7 +157,7 @@ export function OptionPicker({
                     type="button"
                     onClick={() => choose(slot)}
                     disabled={pending}
-                    className="w-full rounded-md bg-ink px-3 py-1.5 text-sm text-oyster transition-opacity hover:opacity-90 disabled:opacity-50"
+                    className="w-full rounded-md bg-ink px-3 py-1.5 text-sm text-page transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
                     {pending ? 'Saving' : 'Pick this one'}
                   </button>

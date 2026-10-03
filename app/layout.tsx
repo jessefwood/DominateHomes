@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Fraunces, Inter } from 'next/font/google'
-import { prisma } from '@/lib/db'
 import './globals.css'
 
 /**
@@ -40,9 +39,22 @@ function siteUrl(): URL {
 }
 
 /**
- * The title follows the project's name in the database rather than a string in
- * the code, so renaming a project is data and not a deploy. Falls back if the
- * database is unreachable, because /signin and /healthz still have to render.
+ * NAMES NO PROJECT, DELIBERATELY.
+ *
+ * The title template used to end in the name of a project, read with
+ * `project.findFirst` ordered by creation. That is the oldest row in the whole
+ * table, for every visitor, on every page, so the tab on the public marketing
+ * site read "Dominate Homes" but the tab on the budget screen read
+ * "Budget - 643 Bianca", and it was that same client's house for everybody,
+ * whoever was signed in and whether or not they were on it.
+ *
+ * Two things wrong with that, and they are the same two as the sign-in email.
+ * It framed the portal as one house rather than the business, and projects are
+ * named by street number and street name, so it put a client's address in the
+ * tab title and in the preview card of any link anybody shared.
+ *
+ * The template is the business now, and this function no longer touches the
+ * database at all, which also takes a query off every page render.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const description =
@@ -74,18 +86,6 @@ export async function generateMetadata(): Promise<Metadata> {
     // The portal is private. Keeping it out of search results costs nothing
     // and avoids a client's budget turning up in a crawl.
     robots: { index: true, follow: true },
-  }
-
-  try {
-    const project = await prisma.project.findFirst({ orderBy: { createdAt: 'asc' } })
-    if (project) {
-      return {
-        ...base,
-        title: { default: 'Dominate Homes', template: `%s · ${project.displayName}` },
-      }
-    }
-  } catch {
-    // The landing page and health check must render without a database.
   }
 
   return base

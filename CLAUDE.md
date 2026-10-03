@@ -115,7 +115,7 @@ Projects are named and addressed by **street number and street name**, not by
 the client's surname. That is the convention for the portal, for artifact URLs
 and for anything the client sees.
 
-Until an address exists, fall back to the builder's plan name. The Grossman
+Until an address exists, fall back to the builder's plan name. The Tigges
 house has no street address assigned yet, so it is *Plan 643 Bianca PSL*
 everywhere, client-facing included, until GL assigns a lot number. The moment
 GL does, set `Project.addressLine` and `Project.displayName` and update

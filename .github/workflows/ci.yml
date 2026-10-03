@@ -29,9 +29,14 @@ jobs:
       # Sign-in links are not sent in CI. Unset RESEND_API_KEY means the console
       # mailer, which is what the build and tests expect.
       APP_URL: http://localhost:3000
-      # Not a real key. Credential encryption needs one present to be
-      # exercised at all, and CI never talks to a live Stripe or Resend.
-      CREDENTIAL_KEY: ci-only-not-a-real-key-0123456789abcdef
+      # Not a real key, and deliberately published: it is base64 of the
+      # ASCII "dominate-homes-ci-only-not-secre" padded to 32 bytes. It has to
+      # be base64 that decodes to exactly 32 bytes, because that is what
+      # credentialKeyProblem accepts, and a value that fails validation leaves
+      # every credential test failing rather than exercising encryption. CI
+      # never talks to a live Stripe or Resend, so nothing is encrypted under
+      # it that matters.
+      CREDENTIAL_KEY: ZG9taW5hdGUtaG9tZXMtY2ktb25seS1ub3Qtc2VjcmU=
 
     steps:
       - uses: actions/checkout@v4

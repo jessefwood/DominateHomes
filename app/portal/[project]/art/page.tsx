@@ -1,5 +1,5 @@
 import { ArtDecision, ReframeStatus } from '@prisma/client'
-import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
+import { Card, EmptyState, PageHeader, Photo, PhotoMissing, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
 import { requireProjectAccess } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
@@ -53,7 +53,15 @@ export default async function ArtPage({
         <h2 className="font-display text-xl text-ink">Coming with you</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {keeping.map((piece) => (
-            <Card key={piece.id} className="p-5">
+            <Card key={piece.id}>
+              {piece.photoUrl ? (
+                <Photo src={piece.photoUrl} alt={piece.title} aspect="aspect-[3/2]" className="rounded-none" />
+              ) : (
+                <PhotoMissing aspect="aspect-[3/2]" className="rounded-none border-0 border-b">
+                  No photo of this one yet
+                </PhotoMissing>
+              )}
+              <div className="p-5">
               <h3 className="leading-snug font-medium text-ink">{piece.title}</h3>
               {piece.artist ? <p className="mt-0.5 text-sm text-driftwood">{piece.artist}</p> : null}
               {piece.sizeLabel ? (
@@ -73,6 +81,10 @@ export default async function ArtPage({
                   <Pill tone="sea">{REFRAME_COPY[piece.reframeStatus]}</Pill>
                 ) : null}
                 {piece.needsStudsOrCleat ? <Pill tone="clay">Needs studs or a cleat</Pill> : null}
+              </div>
+              {piece.photoCaption ? (
+                <p className="mt-3 text-sm text-driftwood">{piece.photoCaption}</p>
+              ) : null}
               </div>
             </Card>
           ))}

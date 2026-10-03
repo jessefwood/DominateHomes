@@ -1,20 +1,27 @@
 import Link from 'next/link'
 import { Role } from '@prisma/client'
 import { Card, PageHeader, Pill } from '@/components/ui'
+import { pendingAccessRequestCount } from '@/lib/access-requests'
 import { listIntegrations } from '@/lib/integrations'
 import { prisma } from '@/lib/db'
+import { dateAndTime } from '@/lib/dates'
+import { trashCount } from '@/lib/trash'
 import { UserRow } from './user-row'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminOverview() {
-  const [projects, users, integrations] = await Promise.all([
+  const [projects, users, integrations, waiting, inTrash, recent] = await Promise.all([
     prisma.project.findMany({
       orderBy: { createdAt: 'asc' },
       include: { _count: { select: { rooms: true } } },
     }),
     prisma.user.findMany({ orderBy: [{ role: 'asc' }, { name: 'asc' }] }),
     listIntegrations(),
+    pendingAccessRequestCount(),
+    trashCount(),
+    // Only the latest one is shown here. The whole log is /admin/activity.
+    prisma.auditEvent.findMany({ orderBy: { createdAt: 'desc' }, take: 1 }),
   ])
 
   const connected = integrations.filter((entry) => entry.connected && entry.enabled).length
@@ -27,10 +34,52 @@ export default async function AdminOverview() {
         intro="Projects, who can sign in, and which services are connected."
       />
 
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Link
+          href="/admin/people"
+          className="hairline rounded-xl border bg-page p-4 shadow-sheet transition-shadow hover:shadow-lifted"
+        >
+          <p className="text-xs tracking-widest text-driftwood uppercase">People</p>
+          <p className="font-display mt-1 text-2xl text-ink">{waiting}</p>
+          <p className="mt-0.5 text-sm text-driftwood">
+            {waiting === 1 ? 'request waiting on you' : 'requests waiting on you'}
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/activity"
+          className="hairline rounded-xl border bg-page p-4 shadow-sheet transition-shadow hover:shadow-lifted"
+        >
+          <p className="text-xs tracking-widest text-driftwood uppercase">Activity</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-ink">
+            {recent[0] ? recent[0].summary : 'Nothing recorded yet'}
+          </p>
+          <p className="mt-1 text-sm text-driftwood">
+            {recent[0] ? dateAndTime(recent[0].createdAt) : 'Signing in and files show up here'}
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/trash"
+          className="hairline rounded-xl border bg-page p-4 shadow-sheet transition-shadow hover:shadow-lifted"
+        >
+          <p className="text-xs tracking-widest text-driftwood uppercase">Trash</p>
+          <p className="font-display mt-1 text-2xl text-ink">{inTrash}</p>
+          <p className="mt-0.5 text-sm text-driftwood">
+            {inTrash === 1 ? 'thing removed, still here' : 'things removed, still here'}
+          </p>
+        </Link>
+      </div>
+
       <section className="space-y-3">
-        <h2 className="font-display text-xl text-ink">Projects</h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-xl text-ink">Projects</h2>
+          <Link href="/admin/projects" className="text-sm text-driftwood hover:text-ink">
+            Edit them
+          </Link>
+        </div>
         {projects.map((project) => (
-          <Card key={project.id} className="p-5">
+          <Card key={project.id} href={`/admin/projects/${project.slug}`} className="p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <div>
                 <p className="font-display text-lg text-ink">{project.displayName}</p>

@@ -1,5 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import type { User } from '@prisma/client'
+import { ensureConfiguredAdmin } from './admins'
+import { AuditAction, record as recordEvent } from './audit'
 import { prisma } from './db'
 import { mailer, signInEmail } from './mailer'
 
@@ -20,7 +22,35 @@ import { mailer, signInEmail } from './mailer'
  */
 
 export const TOKEN_TTL_MINUTES = 20
-export const SESSION_TTL_DAYS = 30
+/**
+ * A year, and it slides.
+ *
+ * Signing in here means waiting for an email and clicking a link, which is a
+ * lot of friction to re-impose on someone who visits every few weeks during a
+ * build that runs for months. So a session lasts a year, and every request
+ * pushes the expiry back out to a year from now, which means somebody who
+ * keeps using the portal never signs in again.
+ *
+ * What makes that an acceptable trade rather than a sloppy one: the portal
+ * holds a furnishing budget, not money or a payment method; there is no
+ * self-signup, so a session can only ever belong to an account we created;
+ * signing out deletes the session server side, not just the cookie; and
+ * `signInEnabled` is checked when a link is requested, so closing an account
+ * stops new sessions. The cookie itself is httpOnly, sameSite lax and secure
+ * in production.
+ *
+ * The one thing it does not survive is a shared computer, which is the normal
+ * cost of staying signed in anywhere.
+ */
+export const SESSION_TTL_DAYS = 365
+
+/**
+ * How stale an expiry has to get before a request refreshes it. Without this,
+ * every page view would write to the session row for a few hours of extra
+ * life; a day's slack makes the write rare and changes nothing a person can
+ * perceive.
+ */
+const SESSION_REFRESH_AFTER_DAYS = 1
 export const SESSION_COOKIE = 'portal_session'
 
 /** How many links one account can ask for inside the window. */
@@ -59,9 +89,22 @@ export type SignInLinkResult =
  * is detailed so that tests and the mailer can see what happened, not so that
  * the UI can.
  */
-export async function requestSignInLink(rawEmail: string, baseUrl: string): Promise<SignInLinkResult> {
+export async function requestSignInLink(
+  rawEmail: string,
+  baseUrl: string,
+): Promise<SignInLinkResult> {
   const email = normaliseEmail(rawEmail)
-  const user = await prisma.user.findUnique({ where: { email } })
+
+  // The way back in. An address on ADMIN_EMAILS in the hosting settings gets
+  // a designer account that can sign in, whether or not one exists. This is
+  // the only thing in here that creates a user, and the only people who can
+  // put an address on that list are the two who own the Railway project.
+  //
+  // It is here rather than in admin because the case it exists for is both
+  // designer accounts being closed or lost, when there is no admin screen to
+  // reach. See lib/admins.ts.
+  const admin = await ensureConfiguredAdmin(email)
+  const user = admin ?? (await prisma.user.findUnique({ where: { email } }))
 
   if (!user) return { sent: false }
 
@@ -91,12 +134,28 @@ export async function requestSignInLink(rawEmail: string, baseUrl: string): Prom
 
   const link = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${encodeURIComponent(token)}`
 
-  // The email names the project, read from the database so a rename is data
-  // rather than a deploy.
-  const project = await prisma.project.findFirst({ orderBy: { createdAt: 'asc' } })
-  const projectName = project?.displayName ?? 'Dominate Homes'
+  // The email names no project, deliberately. It used to name one, and the
+  // one it named was `project.findFirst` ordered by creation: the oldest row
+  // in the whole table, for everybody, with no reference to who was asking.
+  // So a designer with every project on the books got an email headed after
+  // one client's house, and anybody who could ask for a link was told that
+  // client's address whether or not they were on the project.
+  //
+  // Signing in is not about a project. It gets you into the portal, and the
+  // portal shows you the projects you are on.
+  await mailer().send(signInEmail(user.email, user.name, link, TOKEN_TTL_MINUTES))
 
-  await mailer().send(signInEmail(user.email, user.name, link, TOKEN_TTL_MINUTES, projectName))
+  // Recorded for the account it was issued for, not for every address typed
+  // into the form. An attempt on an unknown address returns above this line
+  // and writes nothing, which keeps the log from becoming a list of
+  // other people's email addresses.
+  await recordEvent({
+    action: AuditAction.SIGN_IN_REQUESTED,
+    actor: user,
+    subjectType: 'User',
+    subjectId: user.id,
+    summary: `A sign-in link went out to ${user.name} (${user.email})`,
+  })
 
   return { sent: true, user, token }
 }
@@ -112,7 +171,7 @@ export type RedeemResult =
 export async function redeemSignInLink(token: string): Promise<RedeemResult> {
   const tokenHash = sha256(token)
 
-  return prisma.$transaction(async (tx) => {
+  const outcome: RedeemResult = await prisma.$transaction(async (tx) => {
     const record = await tx.loginToken.findUnique({
       where: { tokenHash },
       include: { user: true },
@@ -137,11 +196,29 @@ export async function redeemSignInLink(token: string): Promise<RedeemResult> {
     const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 86_400_000)
 
     await tx.session.create({
-      data: { userId: record.userId, tokenHash: sha256(sessionToken), expiresAt },
+      data: {
+        userId: record.userId,
+        tokenHash: sha256(sessionToken),
+        expiresAt,
+      },
     })
 
     return { ok: true as const, user: record.user, sessionToken, expiresAt }
   })
+
+  if (outcome.ok) {
+    // After the transaction, deliberately. A failure to write the log must
+    // not roll back a sign-in that otherwise worked.
+    await recordEvent({
+      action: AuditAction.SIGNED_IN,
+      actor: outcome.user,
+      subjectType: 'User',
+      subjectId: outcome.user.id,
+      summary: `${outcome.user.name} signed in`,
+    })
+  }
+
+  return outcome
 }
 
 /** Resolves a session cookie to a user, or null. Expired sessions are cleaned up. */
@@ -160,9 +237,25 @@ export async function userForSessionToken(token: string | undefined): Promise<Us
     return null
   }
 
-  // Cheap last-seen tracking. Not awaited into the critical path on purpose.
+  const now = Date.now()
+  const ttlMs = SESSION_TTL_DAYS * 86_400_000
+  const freshUntil = now + ttlMs
+  // Slide the expiry forward, so an active person is never signed out. Only
+  // written when the stored expiry has drifted by more than a day, which keeps
+  // this off the hot path for ordinary page views.
+  const shouldExtend =
+    freshUntil - session.expiresAt.getTime() > SESSION_REFRESH_AFTER_DAYS * 86_400_000
+
+  // Not awaited into the critical path on purpose: a slow write here would
+  // slow down every page, and losing one refresh costs nothing.
   void prisma.session
-    .update({ where: { id: session.id }, data: { lastSeenAt: new Date() } })
+    .update({
+      where: { id: session.id },
+      data: {
+        lastSeenAt: new Date(now),
+        ...(shouldExtend ? { expiresAt: new Date(freshUntil) } : {}),
+      },
+    })
     .catch(() => {})
 
   return session.user
@@ -185,7 +278,10 @@ export function safeEqual(a: string, b: string): boolean {
 }
 
 /** Clears expired tokens and sessions. Safe to run whenever. */
-export async function pruneExpired(): Promise<{ tokens: number; sessions: number }> {
+export async function pruneExpired(): Promise<{
+  tokens: number
+  sessions: number
+}> {
   const now = new Date()
   const [tokens, sessions] = await Promise.all([
     prisma.loginToken.deleteMany({ where: { expiresAt: { lt: now } } }),
