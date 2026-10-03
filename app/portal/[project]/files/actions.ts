@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireProjectAccess } from '@/lib/projects'
+import { alreadyNotifiedRecently, notifyDesignersOfClientActivity } from '@/lib/notify'
+import { isDesigner, requireProjectAccess } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
 import {
   beginUpload,
@@ -52,11 +53,28 @@ export async function requestUpload(
  */
 export async function finishUpload(projectSlug: string, uploadId: string): Promise<Result> {
   const user = await requireUser()
-  await requireProjectAccess(user, projectSlug)
+  const project = await requireProjectAccess(user, projectSlug)
+
+  // Asked before confirmUpload, because the throttle reads the audit log and
+  // confirmUpload writes to it. See the note in lib/notify.ts: ask first,
+  // then write, then send. This is what turns eleven photographs of a great
+  // room into one email rather than eleven.
+  const quiet = isDesigner(user) ? true : await alreadyNotifiedRecently(user.id, project.id)
 
   const result = await guarded(() => confirmUpload(user, uploadId))
-  if (result.ok) revalidatePath(`/portal/${projectSlug}/files`)
-  return { error: result.error, ok: result.ok }
+  if (!result.ok) return { error: result.error }
+
+  if (!quiet) {
+    await notifyDesignersOfClientActivity({
+      actor: user,
+      project,
+      what: 'sent us some files',
+      path: `/portal/${project.slug}/files`,
+    })
+  }
+
+  revalidatePath(`/portal/${projectSlug}/files`)
+  return { ok: true }
 }
 
 export async function removeUpload(projectSlug: string, uploadId: string): Promise<Result> {

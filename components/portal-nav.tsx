@@ -3,7 +3,16 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-export type PortalSection = { segment: string; label: string }
+export type PortalSection = {
+  segment: string
+  label: string
+  /**
+   * How many things on that section are waiting. Shown as a number next to
+   * the label, and left off entirely at zero: a nav full of grey zeroes reads
+   * as broken rather than as quiet.
+   */
+  count?: number
+}
 
 /**
  * The section list down the side of a project.
@@ -39,6 +48,11 @@ export function PortalNav({ slug, sections }: { slug: string; sections: PortalSe
             }`}
           >
             {item.label}
+            {item.count ? (
+              <span className="ml-1.5 rounded-full bg-clay-deep px-1.5 py-0.5 align-middle text-[11px] leading-none text-page">
+                {item.count}
+              </span>
+            ) : null}
           </Link>
         )
       })}

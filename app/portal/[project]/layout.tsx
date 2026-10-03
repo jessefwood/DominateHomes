@@ -4,6 +4,7 @@ import { BackLink } from '@/components/back-link'
 import { Logomark } from '@/components/logo'
 import { PortalNav, type PortalSection } from '@/components/portal-nav'
 import { ProjectSwitcher } from '@/components/project-switcher'
+import { unreadCount } from '@/lib/messages'
 import { clientLabelFor, isDesigner, projectsForUser, requireProjectAccess } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
 
@@ -34,6 +35,7 @@ const SECTIONS: PortalSection[] = [
   { segment: 'art', label: 'Art' },
   { segment: 'open-items', label: 'Open items' },
   { segment: 'files', label: 'Files' },
+  { segment: 'messages', label: 'Messages' },
   { segment: 'timeline', label: 'Timeline' },
   { segment: 'orders', label: 'Order tracker' },
 ]
@@ -49,6 +51,7 @@ export default async function PortalLayout({
   const user = await requireUser()
   const project = await requireProjectAccess(user, slug)
   const projects = await projectsForUser(user)
+  const unread = await unreadCount(user, project.id)
 
   // Shown to the design side only: these screens talk to the client in the
   // second person, so without this an admin reads "waiting on you" about
@@ -94,7 +97,12 @@ export default async function PortalLayout({
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row lg:gap-12 lg:px-8">
         <aside className="lg:w-52 lg:shrink-0">
           <div className="lg:sticky lg:top-24">
-            <PortalNav slug={project.slug} sections={SECTIONS} />
+            <PortalNav
+              slug={project.slug}
+              sections={SECTIONS.map((section) =>
+                section.segment === 'messages' ? { ...section, count: unread } : section,
+              )}
+            />
 
             <div className="hairline mt-6 hidden border-t pt-4 lg:block">
               <BackLink fallbackHref="/portal" />
