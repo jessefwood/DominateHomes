@@ -18,6 +18,8 @@ const NAV: AdminLink[] = [
   { href: '/admin/people', label: 'People' },
   { href: '/admin/proposals', label: 'Proposals' },
   { href: '/admin/integrations', label: 'Integrations' },
+  { href: '/admin/activity', label: 'Activity' },
+  { href: '/admin/trash', label: 'Trash' },
 ]
 
 /** Private. A client's budget has no business in a search index. */

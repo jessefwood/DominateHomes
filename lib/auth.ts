@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import type { User } from '@prisma/client'
 import { ensureConfiguredAdmin } from './admins'
+import { AuditAction, record as recordEvent } from './audit'
 import { prisma } from './db'
 import { mailer, signInEmail } from './mailer'
 
@@ -142,6 +143,18 @@ export async function requestSignInLink(
 
   await mailer().send(signInEmail(user.email, user.name, link, TOKEN_TTL_MINUTES, projectName))
 
+  // Recorded for the account it was issued for, not for every address typed
+  // into the form. An attempt on an unknown address returns above this line
+  // and writes nothing, which keeps the log from becoming a list of
+  // other people's email addresses.
+  await recordEvent({
+    action: AuditAction.SIGN_IN_REQUESTED,
+    actor: user,
+    subjectType: 'User',
+    subjectId: user.id,
+    summary: `A sign-in link went out to ${user.name} (${user.email})`,
+  })
+
   return { sent: true, user, token }
 }
 
@@ -156,7 +169,7 @@ export type RedeemResult =
 export async function redeemSignInLink(token: string): Promise<RedeemResult> {
   const tokenHash = sha256(token)
 
-  return prisma.$transaction(async (tx) => {
+  const outcome: RedeemResult = await prisma.$transaction(async (tx) => {
     const record = await tx.loginToken.findUnique({
       where: { tokenHash },
       include: { user: true },
@@ -190,6 +203,20 @@ export async function redeemSignInLink(token: string): Promise<RedeemResult> {
 
     return { ok: true as const, user: record.user, sessionToken, expiresAt }
   })
+
+  if (outcome.ok) {
+    // After the transaction, deliberately. A failure to write the log must
+    // not roll back a sign-in that otherwise worked.
+    await recordEvent({
+      action: AuditAction.SIGNED_IN,
+      actor: outcome.user,
+      subjectType: 'User',
+      subjectId: outcome.user.id,
+      summary: `${outcome.user.name} signed in`,
+    })
+  }
+
+  return outcome
 }
 
 /** Resolves a session cookie to a user, or null. Expired sessions are cleaned up. */

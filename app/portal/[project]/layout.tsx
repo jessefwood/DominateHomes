@@ -112,10 +112,23 @@ export default async function PortalLayout({
 
         <main className="min-w-0 flex-1 pb-20">
           {viewingAs ? (
-            <p className="mb-6 rounded-lg bg-clay-wash px-4 py-2.5 text-sm text-clay-deep">
-              This is {viewingAs}&rsquo;s view of the project. Anywhere a page says
-              &ldquo;you&rdquo;, it means them, not you.
-            </p>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg bg-clay-wash px-4 py-2.5">
+              <p className="text-sm text-clay-deep">
+                This is {viewingAs}&rsquo;s view of the project. Anywhere a page says
+                &ldquo;you&rdquo;, it means them, not you.
+              </p>
+              {/*
+                A way out that goes somewhere, rather than leaving a designer
+                to find the account menu. Reading a project as the client is
+                something you do on purpose and then stop doing.
+              */}
+              <Link
+                href={`/admin/projects/${project.slug}`}
+                className="shrink-0 text-sm text-clay-deep underline underline-offset-2 hover:text-ink"
+              >
+                Back to editing it
+              </Link>
+            </div>
           ) : null}
           {children}
         </main>
