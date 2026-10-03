@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/ui'
-import { credentialKeyProblem, KEY_PROBLEM_DETAIL } from '@/lib/crypto'
+import { configuredCredentialKey, credentialKeyProblem, KEY_PROBLEM_DETAIL } from '@/lib/crypto'
 import { listIntegrations } from '@/lib/integrations'
 import { IntegrationPanel, type PanelData } from './panel'
 
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function IntegrationsPage() {
   const integrations = await listIntegrations()
-  const keyProblem = credentialKeyProblem()
+  const keyProblem = credentialKeyProblem(configuredCredentialKey())
 
   const panels: PanelData[] = integrations.map((entry) => ({
     kind: entry.kind,

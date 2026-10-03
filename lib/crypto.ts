@@ -52,7 +52,15 @@ export class MissingCredentialKeyError extends Error {
  */
 export type KeyProblem = 'missing' | 'pasted-the-command' | 'not-base64' | 'wrong-length'
 
-export function credentialKeyProblem(raw = process.env.CREDENTIAL_KEY): KeyProblem | null {
+/**
+ * The value is always passed in rather than defaulting to the environment.
+ * A default of `process.env.CREDENTIAL_KEY` reads the same either way when
+ * the argument is `undefined`, so asking "what is wrong with an unset value"
+ * silently became "what is wrong with the one this machine happens to have",
+ * and the answer changed with the environment. Callers that mean the
+ * environment say so.
+ */
+export function credentialKeyProblem(raw: string | undefined | null): KeyProblem | null {
   const value = raw?.trim()
 
   if (!value) return 'missing'
@@ -85,8 +93,13 @@ export const KEY_PROBLEM_DETAIL: Record<KeyProblem, string> = {
     'CREDENTIAL_KEY is valid base64 but does not decode to 32 bytes, so it did not come from the command below.',
 }
 
+/** The configured key, or `undefined` when the hosting environment has none. */
+export function configuredCredentialKey(): string | undefined {
+  return process.env.CREDENTIAL_KEY
+}
+
 function key(): Buffer {
-  const problem = credentialKeyProblem()
+  const problem = credentialKeyProblem(configuredCredentialKey())
   if (problem) throw new MissingCredentialKeyError(KEY_PROBLEM_DETAIL[problem])
 
   // scrypt, not the decoded bytes directly, because that is what every value
@@ -97,7 +110,7 @@ function key(): Buffer {
 }
 
 export function credentialKeyConfigured(): boolean {
-  return credentialKeyProblem() === null
+  return credentialKeyProblem(configuredCredentialKey()) === null
 }
 
 /** Returns iv.tag.ciphertext, all base64url, in one string. */
