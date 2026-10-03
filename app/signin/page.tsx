@@ -14,6 +14,10 @@ const PROBLEM: Record<string, string> = {
   address: 'That does not look like an email address. Have another go.',
   toomany: 'That is a lot of links in a short time. Wait a few minutes and try again.',
   failed: 'Something went wrong sending that. Try again in a moment, and text Davina if it keeps happening.',
+  // Deliberately says it is our fault, because it is. The alternative is
+  // somebody trying three more times and concluding they are doing it wrong.
+  misconfigured:
+    'Sign in is not working properly at our end at the moment, so nothing was sent. This is not something you did. Text Davina and she will sort it out.',
   // The four an invitation link can end in. "spent" is the common one and the
   // only one that is good news, so it does not read like a failure.
   'invite-spent':

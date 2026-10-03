@@ -4,7 +4,7 @@ import { AccountMenu } from '@/components/account-menu'
 import { BackLink } from '@/components/back-link'
 import { Logomark } from '@/components/logo'
 import { AdminNav, type AdminLink } from '@/components/admin-nav'
-import { requireDesigner } from '@/lib/session'
+import { appUrlProblem, requireDesigner } from '@/lib/session'
 
 /**
  * Admin. Designers only: requireDesigner sends a client to their own portal
@@ -33,6 +33,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // missing one of these is losing a job to whoever replied first.
   const waiting = await pendingAccessRequestCount()
 
+  // Shown on every admin page, above everything else, because while this is
+  // wrong nobody can sign in at all. Production once had APP_URL set to
+  // Railway's internal address, so every link emailed pointed at the
+  // recipient's own phone, and nothing anywhere said so: the only symptom was
+  // a client seeing a browser error and assuming they had done something
+  // wrong. A misconfiguration that only a client can observe is one nobody
+  // fixes.
+  const linkProblem = appUrlProblem(process.env.APP_URL)
+
   return (
     <div className="min-h-screen">
       <header className="hairline sticky top-0 z-40 border-b bg-page/85 backdrop-blur-sm">
@@ -59,6 +68,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">
+        {linkProblem ? (
+          <div className="mb-6 rounded-lg border border-clay bg-clay-wash px-4 py-3.5">
+            <p className="font-medium text-clay-deep">Nobody can sign in at the moment.</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-clay-deep">{linkProblem}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-driftwood-deep">
+              Change it in the Railway settings for this service, under Variables. Nothing is being
+              emailed until it is right, which is deliberate: a link that cannot work looks to the
+              client like their own fault.
+            </p>
+          </div>
+        ) : null}
+
         {waiting > 0 ? (
           <Link
             href="/admin/people"
