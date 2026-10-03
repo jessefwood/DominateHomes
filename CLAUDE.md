@@ -76,14 +76,19 @@ the top. Speaking directly to Abbie, not at her.
 
 Workspace: `dominatehomes.slack.com`.
 
-**`#claude-handoff` (private) is the handoff channel. All of it, every
-project.** Anything a human or Cowork has to do in a browser that a cloud
-session cannot reach goes here: Railway, DNS, Resend, Stripe, GitHub settings.
-Post one numbered task, first line naming the project, and ask for a reply in
-thread after each step.
+**`#claude-handoff` (private) is the only channel Claude posts in.** Every
+project, every handoff, every status update. Anything a human or Cowork has to
+do in a browser that a cloud session cannot reach goes here: Railway, DNS,
+Resend, Stripe, GitHub settings. Post one numbered task, first line naming the
+project, and ask for a reply after each step.
 
-Per-project discussion goes in that project's own channel. The current one is
-`#plan-643-bianca-psl`.
+There are no per-project channels. Do not create one. `#plan-643-bianca-psl`
+and `#cowork-handoff` both existed briefly and are archived.
+
+Client budgets, vendor pricing and approval history go in this channel or
+nowhere. Note that archiving a Slack channel only hides it from the sidebar;
+the contents stay readable and searchable by the whole workspace. Archiving is
+not a privacy control.
 
 Write handoffs for someone non-technical. Say which page, which button, what
 should happen, and what to do when it does not. Never hand a step back with
