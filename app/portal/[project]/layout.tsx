@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Logomark } from '@/components/logo'
 import { clientLabelFor, isDesigner, requireProjectAccess } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
 
@@ -46,9 +47,16 @@ export default async function PortalLayout({
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row lg:gap-12 lg:px-8">
       <aside className="lg:w-56 lg:shrink-0">
-        <Link href={`/portal/${project.slug}`} className="block">
-          <p className="font-display text-xl leading-tight text-ink">{project.displayName}</p>
-          <p className="mt-1 text-xs tracking-wide text-driftwood uppercase">Dominate Homes</p>
+        <Link href={`/portal/${project.slug}`} className="flex items-start gap-2.5">
+          <Logomark className="mt-1 w-7 shrink-0 text-ink" title="Dominate Homes" />
+          <span>
+            <span className="font-display block text-xl leading-tight text-ink">
+              {project.displayName}
+            </span>
+            <span className="mt-1 block text-xs tracking-wide text-driftwood uppercase">
+              Dominate Homes
+            </span>
+          </span>
         </Link>
 
         <nav className="mt-6 flex flex-wrap gap-x-4 gap-y-1 lg:mt-8 lg:flex-col lg:gap-y-0.5">

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Logomark } from '@/components/logo'
 import { requireDesigner } from '@/lib/session'
 
 /**
@@ -24,13 +25,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen">
       <header className="hairline border-b bg-white/60">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-8">
-          <div>
+          <div className="flex items-start gap-2.5">
+            <Logomark className="mt-1 w-7 shrink-0 text-ink" title="Dominate Homes" />
+            <div>
             <Link href="/admin" className="font-display text-lg leading-none text-ink">
               Dominate Homes admin
             </Link>
             <p className="mt-1 text-[11px] tracking-[0.18em] text-driftwood uppercase">
               {user.name}
             </p>
+            </div>
           </div>
 
           <nav className="flex flex-wrap items-center gap-4">

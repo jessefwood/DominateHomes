@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { OpenItemOwner, OpenItemStatus, SelectionStatus } from '@prisma/client'
 import { Card, OpenQuestion, PageHeader, Pill } from '@/components/ui'
-import { budgetTotals } from '@/lib/budget'
 import { prisma } from '@/lib/db'
 import { formatCents } from '@/lib/money'
 import { requireProjectAccess } from '@/lib/projects'
+import { currentProposalFor } from '@/lib/proposals'
 import { requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
@@ -34,7 +34,7 @@ export default async function DashboardPage({
   const user = await requireUser()
   const project = await requireProjectAccess(user, projectSlug)
 
-  const [openItems, selections, totals, deadline] = await Promise.all([
+  const [openItems, selections, proposal, deadline] = await Promise.all([
     prisma.openItem.findMany({
       where: { projectId: project.id, status: OpenItemStatus.OPEN },
       orderBy: { order: 'asc' },
@@ -48,7 +48,7 @@ export default async function DashboardPage({
       where: { room: { projectId: project.id } },
       _count: true,
     }),
-    budgetTotals(project.id),
+    currentProposalFor(project.id),
     prisma.milestone.findFirst({
       where: { projectId: project.id, isDeadline: true },
       orderBy: { order: 'asc' },
@@ -141,30 +141,41 @@ export default async function DashboardPage({
         <Card className="p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-display text-lg text-ink">Money, at a glance</h2>
-            <Link href={`/portal/${project.slug}/budget`} className="text-sm text-driftwood hover:text-ink">
-              Full budget
+            <Link
+              href={`/portal/${project.slug}/${proposal ? 'proposal' : 'budget'}`}
+              className="text-sm text-driftwood hover:text-ink"
+            >
+              {proposal ? 'The proposal' : 'Full budget'}
             </Link>
           </div>
-          <dl className="mt-3 space-y-3">
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-sm text-driftwood-deep">Furnishings planned</dt>
-              <dd className="text-ink">{formatCents(totals.furnishing.plannedCents)}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-sm text-driftwood-deep">Davina&rsquo;s expenses</dt>
-              <dd className="text-ink">
-                {totals.expense.plannedCents === 0
-                  ? 'None yet'
-                  : formatCents(totals.expense.plannedCents)}
-              </dd>
-            </div>
-          </dl>
+          {/*
+            Davina's rule, in her words: she always puts client pricing in
+            herself so she knows it is right. The figure that used to sit here
+            came off the planning bands in the source documents, not from her,
+            so by her own test it does not belong on a screen the client reads.
+            It is the proposal that carries numbers now, because a proposal is
+            a figure she entered and sent deliberately.
+          */}
+          {proposal ? (
+            <dl className="mt-3 space-y-3">
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-sm text-driftwood-deep">Goods, delivered</dt>
+                <dd className="text-ink">{formatCents(proposal.goodsDeliveredCents)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-sm text-driftwood-deep">Davina&rsquo;s fee and expenses</dt>
+                <dd className="text-ink">{formatCents(proposal.feesAndExpensesCents)}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="mt-3 text-sm leading-relaxed text-driftwood-deep">
+              Nothing to show here yet. Numbers appear once Davina sends you the proposal, so what
+              you read is always a figure she set rather than one worked out from a planning band.
+            </p>
+          )}
           <p className="mt-3 text-xs leading-relaxed text-driftwood">
-            Two separate totals that never get added together.{' '}
-            {totals.expense.plannedCents === 0
-              ? 'Expenses go on the second line as they come up, which is why it is empty today.'
-              : null}{' '}
-            Nothing is a quote until it is priced against a live product.
+            Furnishings and Davina&rsquo;s own costs are two separate totals that never get added
+            together. Nothing is a quote until it is priced against a live product.
           </p>
         </Card>
       </section>

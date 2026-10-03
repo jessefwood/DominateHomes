@@ -22,7 +22,7 @@ describe('approvals freeze the price at signing', () => {
     const approval = await signRoomApproval({
       roomId: room.id,
       userId: user.id,
-      signedByName: 'Abbie Grossman',
+      signedByName: 'Abbie Tigges',
     })
 
     assert.equal(approval.lines.length, 1)
@@ -56,7 +56,7 @@ describe('approvals freeze the price at signing', () => {
     await setOptions(selection.id, [option('Chair', 13_000)])
     await chooseOption(selection.id, OptionSlot.A)
 
-    const approval = await signRoomApproval({ roomId: room.id, userId: user.id, signedByName: 'Abbie Grossman' })
+    const approval = await signRoomApproval({ roomId: room.id, userId: user.id, signedByName: 'Abbie Tigges' })
 
     assert.equal(approval.lines[0].lineTotalCents, 104_000)
     assert.equal(approval.statementShown, APPROVAL_STATEMENT)
@@ -68,7 +68,7 @@ describe('approvals freeze the price at signing', () => {
     await setOptions(selection.id, [{ ...option('Custom sofa', 220_000), nonReturnable: true }])
     await chooseOption(selection.id, OptionSlot.A)
 
-    const approval = await signRoomApproval({ roomId: room.id, userId: user.id, signedByName: 'Abbie Grossman' })
+    const approval = await signRoomApproval({ roomId: room.id, userId: user.id, signedByName: 'Abbie Tigges' })
 
     assert.equal(approval.includedNonReturnable, true)
     assert.equal(approval.lines[0].nonReturnable, true)
@@ -84,7 +84,7 @@ describe('approvals freeze the price at signing', () => {
     })
 
     await assert.rejects(
-      () => signRoomApproval({ roomId: room.id, userId: user.id, signedByName: 'Abbie Grossman' }),
+      () => signRoomApproval({ roomId: room.id, userId: user.id, signedByName: 'Abbie Tigges' }),
       UnchosenItemsError,
     )
 
@@ -95,7 +95,7 @@ describe('approvals freeze the price at signing', () => {
     const { room, selection, user } = await fixture()
     await setOptions(selection.id, [option('Sofa', 120_000)])
     await chooseOption(selection.id, OptionSlot.A)
-    await signRoomApproval({ roomId: room.id, userId: user.id, signedByName: 'Abbie Grossman' })
+    await signRoomApproval({ roomId: room.id, userId: user.id, signedByName: 'Abbie Tigges' })
 
     await prisma.selectionOption.updateMany({
       where: { selectionId: selection.id },

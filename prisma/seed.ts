@@ -110,7 +110,7 @@ async function main() {
     data: {
       // Sign-in links go to this address, so it has to be right.
       email: 'abbieg323@gmail.com',
-      name: 'Abbie Grossman',
+      name: 'Abbie Tigges',
       role: Role.CLIENT,
       // Deliberately closed. The pricing proposal and the design services
       // agreement both have to exist before Abbie is let in, and that is
@@ -156,7 +156,7 @@ async function main() {
       acSqFt: 2799,
       totalSqFt: 3599,
       phase: Phase.SELECTIONS,
-      clientName: 'Abbie Grossman',
+      clientName: 'Abbie Tigges',
       designer: 'Davina Hughes, Dominate Homes',
       allocationCents: d(47_000),
       earliestCloseOn: new Date('2027-04-01T00:00:00Z'),

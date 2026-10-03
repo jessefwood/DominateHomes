@@ -20,7 +20,35 @@ import { mailer, signInEmail } from './mailer'
  */
 
 export const TOKEN_TTL_MINUTES = 20
-export const SESSION_TTL_DAYS = 30
+/**
+ * A year, and it slides.
+ *
+ * Signing in here means waiting for an email and clicking a link, which is a
+ * lot of friction to re-impose on someone who visits every few weeks during a
+ * build that runs for months. So a session lasts a year, and every request
+ * pushes the expiry back out to a year from now, which means somebody who
+ * keeps using the portal never signs in again.
+ *
+ * What makes that an acceptable trade rather than a sloppy one: the portal
+ * holds a furnishing budget, not money or a payment method; there is no
+ * self-signup, so a session can only ever belong to an account we created;
+ * signing out deletes the session server side, not just the cookie; and
+ * `signInEnabled` is checked when a link is requested, so closing an account
+ * stops new sessions. The cookie itself is httpOnly, sameSite lax and secure
+ * in production.
+ *
+ * The one thing it does not survive is a shared computer, which is the normal
+ * cost of staying signed in anywhere.
+ */
+export const SESSION_TTL_DAYS = 365
+
+/**
+ * How stale an expiry has to get before a request refreshes it. Without this,
+ * every page view would write to the session row for a few hours of extra
+ * life; a day's slack makes the write rare and changes nothing a person can
+ * perceive.
+ */
+const SESSION_REFRESH_AFTER_DAYS = 1
 export const SESSION_COOKIE = 'portal_session'
 
 /** How many links one account can ask for inside the window. */
@@ -59,7 +87,10 @@ export type SignInLinkResult =
  * is detailed so that tests and the mailer can see what happened, not so that
  * the UI can.
  */
-export async function requestSignInLink(rawEmail: string, baseUrl: string): Promise<SignInLinkResult> {
+export async function requestSignInLink(
+  rawEmail: string,
+  baseUrl: string,
+): Promise<SignInLinkResult> {
   const email = normaliseEmail(rawEmail)
   const user = await prisma.user.findUnique({ where: { email } })
 
@@ -93,7 +124,9 @@ export async function requestSignInLink(rawEmail: string, baseUrl: string): Prom
 
   // The email names the project, read from the database so a rename is data
   // rather than a deploy.
-  const project = await prisma.project.findFirst({ orderBy: { createdAt: 'asc' } })
+  const project = await prisma.project.findFirst({
+    orderBy: { createdAt: 'asc' },
+  })
   const projectName = project?.displayName ?? 'Dominate Homes'
 
   await mailer().send(signInEmail(user.email, user.name, link, TOKEN_TTL_MINUTES, projectName))
@@ -137,7 +170,11 @@ export async function redeemSignInLink(token: string): Promise<RedeemResult> {
     const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 86_400_000)
 
     await tx.session.create({
-      data: { userId: record.userId, tokenHash: sha256(sessionToken), expiresAt },
+      data: {
+        userId: record.userId,
+        tokenHash: sha256(sessionToken),
+        expiresAt,
+      },
     })
 
     return { ok: true as const, user: record.user, sessionToken, expiresAt }
@@ -160,9 +197,25 @@ export async function userForSessionToken(token: string | undefined): Promise<Us
     return null
   }
 
-  // Cheap last-seen tracking. Not awaited into the critical path on purpose.
+  const now = Date.now()
+  const ttlMs = SESSION_TTL_DAYS * 86_400_000
+  const freshUntil = now + ttlMs
+  // Slide the expiry forward, so an active person is never signed out. Only
+  // written when the stored expiry has drifted by more than a day, which keeps
+  // this off the hot path for ordinary page views.
+  const shouldExtend =
+    freshUntil - session.expiresAt.getTime() > SESSION_REFRESH_AFTER_DAYS * 86_400_000
+
+  // Not awaited into the critical path on purpose: a slow write here would
+  // slow down every page, and losing one refresh costs nothing.
   void prisma.session
-    .update({ where: { id: session.id }, data: { lastSeenAt: new Date() } })
+    .update({
+      where: { id: session.id },
+      data: {
+        lastSeenAt: new Date(now),
+        ...(shouldExtend ? { expiresAt: new Date(freshUntil) } : {}),
+      },
+    })
     .catch(() => {})
 
   return session.user
@@ -185,7 +238,10 @@ export function safeEqual(a: string, b: string): boolean {
 }
 
 /** Clears expired tokens and sessions. Safe to run whenever. */
-export async function pruneExpired(): Promise<{ tokens: number; sessions: number }> {
+export async function pruneExpired(): Promise<{
+  tokens: number
+  sessions: number
+}> {
   const now = new Date()
   const [tokens, sessions] = await Promise.all([
     prisma.loginToken.deleteMany({ where: { expiresAt: { lt: now } } }),

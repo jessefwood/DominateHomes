@@ -20,26 +20,84 @@ const IV_BYTES = 12
 const SALT = 'dominate-homes-credentials-v1'
 
 export class MissingCredentialKeyError extends Error {
-  constructor() {
+  constructor(readonly detail: string) {
     super(
-      'CREDENTIAL_KEY is not set, so third party credentials cannot be stored or read. ' +
-        'Generate one with: openssl rand -base64 32',
+      `${detail} Generate one by running this in a terminal, then paste the output ` +
+        '(not the command) into Railway as CREDENTIAL_KEY: openssl rand -base64 32',
     )
     this.name = 'MissingCredentialKeyError'
   }
 }
 
+/**
+ * Why this is checked rather than accepted.
+ *
+ * The first version asked only that the value be present and at least 16
+ * characters, and stretched whatever it got with scrypt. That is wrong in a
+ * specific and nasty way: the instruction above contains a command, and the
+ * obvious misreading is to paste the command instead of running it. The string
+ * `openssl rand -base64 32` is 23 characters, so it sailed through, the
+ * warning on /admin/integrations cleared, and a live Stripe key would have
+ * been encrypted under a phrase printed in our own error message. That is
+ * worse than being broken, because nothing afterwards looks wrong.
+ *
+ * So the value has to be what the command actually produces: base64 that
+ * decodes to 32 bytes. Anything else fails loudly and says which way it
+ * failed, and the two likely mistakes get their own messages rather than a
+ * generic one.
+ *
+ * `Buffer.from(value, 'base64')` is permissive and will not tell us the input
+ * was malformed, so the byte length of the decode is the check, and
+ * re-encoding and comparing catches input that merely contained some base64.
+ */
+export type KeyProblem = 'missing' | 'pasted-the-command' | 'not-base64' | 'wrong-length'
+
+export function credentialKeyProblem(raw = process.env.CREDENTIAL_KEY): KeyProblem | null {
+  const value = raw?.trim()
+
+  if (!value) return 'missing'
+  if (/openssl|rand\s|base64\s+32/i.test(value)) return 'pasted-the-command'
+
+  const decoded = Buffer.from(value, 'base64')
+
+  // A 32 byte key is 44 base64 characters including the single pad character.
+  if (decoded.length !== 32) {
+    return /^[A-Za-z0-9+/_-]+={0,2}$/.test(value) ? 'wrong-length' : 'not-base64'
+  }
+
+  // Re-encoding has to round trip, or the input was not clean base64 and the
+  // decode quietly ignored part of it.
+  const canonical = decoded.toString('base64')
+  if (canonical !== value && canonical.replace(/\+/g, '-').replace(/\//g, '_') !== value) {
+    return 'not-base64'
+  }
+
+  return null
+}
+
+export const KEY_PROBLEM_DETAIL: Record<KeyProblem, string> = {
+  missing:
+    'CREDENTIAL_KEY is not set in the hosting environment, so third party credentials cannot be stored or read.',
+  'pasted-the-command':
+    'CREDENTIAL_KEY looks like the command rather than its output, so it is a publicly known string and not a secret. Run the command and paste what it prints.',
+  'not-base64': 'CREDENTIAL_KEY is not valid base64, so it did not come from the command below.',
+  'wrong-length':
+    'CREDENTIAL_KEY is valid base64 but does not decode to 32 bytes, so it did not come from the command below.',
+}
+
 function key(): Buffer {
-  const secret = process.env.CREDENTIAL_KEY
-  if (!secret || secret.length < 16) throw new MissingCredentialKeyError()
-  // scrypt stretches whatever was pasted into a proper 32 byte key, so a
-  // short-but-present value does not silently become a weak cipher key.
-  return scryptSync(secret, SALT, 32)
+  const problem = credentialKeyProblem()
+  if (problem) throw new MissingCredentialKeyError(KEY_PROBLEM_DETAIL[problem])
+
+  // scrypt, not the decoded bytes directly, because that is what every value
+  // already in the database was encrypted under. The validation above is what
+  // stops a weak input reaching here; changing the derivation now would make
+  // existing ciphertext undecryptable for no security gain.
+  return scryptSync(process.env.CREDENTIAL_KEY!.trim(), SALT, 32)
 }
 
 export function credentialKeyConfigured(): boolean {
-  const secret = process.env.CREDENTIAL_KEY
-  return Boolean(secret && secret.length >= 16)
+  return credentialKeyProblem() === null
 }
 
 /** Returns iv.tag.ciphertext, all base64url, in one string. */
@@ -48,7 +106,11 @@ export function encryptSecret(plaintext: string): string {
   const cipher = createCipheriv(ALGORITHM, key(), iv)
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
   const tag = cipher.getAuthTag()
-  return [iv.toString('base64url'), tag.toString('base64url'), encrypted.toString('base64url')].join('.')
+  return [
+    iv.toString('base64url'),
+    tag.toString('base64url'),
+    encrypted.toString('base64url'),
+  ].join('.')
 }
 
 export function decryptSecret(stored: string): string {
@@ -61,7 +123,10 @@ export function decryptSecret(stored: string): string {
   decipher.setAuthTag(Buffer.from(tagPart, 'base64url'))
   // Throws if the ciphertext or the key is wrong, which is what we want:
   // a silently wrong key would send a garbage secret to a payment provider.
-  return Buffer.concat([decipher.update(Buffer.from(dataPart, 'base64url')), decipher.final()]).toString('utf8')
+  return Buffer.concat([
+    decipher.update(Buffer.from(dataPart, 'base64url')),
+    decipher.final(),
+  ]).toString('utf8')
 }
 
 /** Last four characters, for showing which key is in place without revealing it. */

@@ -236,11 +236,11 @@ describe('proposals', () => {
     const accepted = await acceptProposal({
       proposalId: sent.id,
       userId: user.id,
-      typedName: '  Abbie Grossman  ',
+      typedName: '  Abbie Tigges  ',
     })
 
     assert.equal(accepted.status, ProposalStatus.ACCEPTED)
-    assert.equal(accepted.acceptedByName, 'Abbie Grossman')
+    assert.equal(accepted.acceptedByName, 'Abbie Tigges')
     assert.equal(accepted.acceptedByUserId, user.id)
     assert.equal(accepted.statementShown, PROPOSAL_STATEMENT)
     assert.ok(accepted.acceptedAt)

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Logomark } from '@/components/logo'
 
 export const metadata = {
   title: 'Page not found',
@@ -13,7 +14,8 @@ export const metadata = {
 export default function NotFound() {
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-6 py-16">
-      <p className="eyebrow">Dominate Homes</p>
+      <Logomark className="w-11 text-ink" title="Dominate Homes" />
+      <p className="eyebrow mt-4">Dominate Homes</p>
       <h1 className="font-display mt-4 text-4xl leading-tight text-ink">
         That page is not here.
       </h1>

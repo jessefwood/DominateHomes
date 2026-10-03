@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { Logomark } from '@/components/logo'
 import { currentUser } from '@/lib/session'
 import { SignInForm } from './form'
 
@@ -30,7 +31,8 @@ export default async function SignInPage({
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
       <div className="hairline rounded-lg border bg-white p-7">
-        <p className="text-xs tracking-widest text-driftwood uppercase">Dominate Homes</p>
+        <Logomark className="w-11 text-ink" title="Dominate Homes" />
+        <p className="mt-4 text-xs tracking-widest text-driftwood uppercase">Dominate Homes</p>
         <h1 className="font-display mt-1 text-2xl leading-tight text-ink">Sign in</h1>
 
         {message ? (
