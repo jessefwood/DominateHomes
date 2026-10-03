@@ -73,6 +73,20 @@ green the last deploy looks.
 Required variables: `DATABASE_URL`, `APP_URL`, `MAIL_FROM`, `RESEND_API_KEY`,
 `CREDENTIAL_KEY`. Never set `PORT`.
 
+## Do not add --turbopack to the build
+
+`npm run build` is deliberately plain `next build`. A Turbopack production
+build breaks progressive enhancement for server actions: a form submitted
+before React hydrates returns a 500 with `Cannot read properties of undefined
+(reading 'bind')` instead of working.
+
+That matters because the moment it happens is the worst one. A browser holding
+a page from before a deploy cannot load the new script chunks, never hydrates,
+and the person sees sign-in do nothing at all. Verified both ways on Next
+15.5.27: Turbopack 500s, a normal build returns the redirect.
+
+Dev still uses Turbopack, which is fine and fast.
+
 ## The database
 
 `npm run db:seed` wipes every table and rebuilds from the source documents. It
