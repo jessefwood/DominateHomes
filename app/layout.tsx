@@ -1,6 +1,35 @@
 import type { Metadata } from 'next'
+import { Fraunces, Inter } from 'next/font/google'
 import { prisma } from '@/lib/db'
 import './globals.css'
+
+/**
+ * Typography.
+ *
+ * Fraunces for display. It is an old-style serif with real optical sizing, so
+ * a 60px headline gets the high contrast and tight fit that reads editorial,
+ * while the same face at 20px stays sturdy. Its quirk axes are turned down:
+ * SOFT 0 and WONK 0 give the refined cut rather than the playful one, which
+ * is the difference between looking crafted and looking novelty.
+ *
+ * Inter for everything else, deliberately quiet. On a site whose job is to
+ * make rooms look good, the interface type should not be competing.
+ *
+ * Both are self-hosted by next/font at build time: no request to Google when
+ * someone loads the page, and no flash of fallback text.
+ */
+const display = Fraunces({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display-face',
+  axes: ['SOFT', 'WONK', 'opsz'],
+})
+
+const text = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-text-face',
+})
 
 /**
  * Where the site is served from. Link previews need absolute URLs, so the
@@ -17,7 +46,7 @@ function siteUrl(): URL {
  */
 export async function generateMetadata(): Promise<Metadata> {
   const description =
-    'Interior design for new builds on the Treasure Coast. Every room costed, every piece measured, and every decision narrowed to three options.'
+    'Furnishing and styling new builds on the Treasure Coast. Every room costed, every piece measured, and every decision narrowed to three options.'
 
   const base: Metadata = {
     metadataBase: siteUrl(),
@@ -64,8 +93,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen">{children}</body>
+    <html lang="en" className={`${display.variable} ${text.variable}`}>
+      <body className="min-h-screen antialiased">{children}</body>
     </html>
   )
 }
