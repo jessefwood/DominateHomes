@@ -166,3 +166,93 @@ describe('guessing a type from a name', () => {
     assert.equal(contentTypeFor('trouble.html'), 'application/octet-stream')
   })
 })
+
+/**
+ * A fixed signature, so a refactor cannot quietly break signing.
+ *
+ * Signature V4 fails in a way that is impossible to debug from the outside: a
+ * wrong byte anywhere in the canonical request produces a valid-looking URL
+ * and a flat 403 from the bucket, with no clue which of the dozen inputs was
+ * wrong. So the value below is pinned.
+ *
+ * WHERE THE VALUE COMES FROM. It is the AWS documentation's own presigned GET
+ * example inputs (examplebucket, test.txt, the published example key pair,
+ * us-east-1, 24 hours, frozen at 2013-05-24T00:00:00Z), and the signature was
+ * computed independently with openssl, by hand, outside this codebase:
+ *
+ *   canonical request sha256
+ *     3bfa292879f6447bbcda7001decf97f4a54dc650c8942174ae0a9121cf58ad04
+ *   signature
+ *     3ed0be64024db54d5574a27da223529635c383f911f80e636f0ccc13890053d2
+ *
+ * Two different implementations agreeing on the same inputs is what makes
+ * this worth having. It is not a certificate of correctness against a live
+ * bucket, which only a live bucket can give.
+ */
+describe('the signature itself', () => {
+  const EXAMPLE = {
+    S3_BUCKET: 'examplebucket',
+    S3_KEY: 'AKIAIOSFODNN7EXAMPLE',
+    // The key pair published in the AWS signing documentation. It has never
+    // been live anywhere.
+    S3_SECRET: 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY',
+    S3_ENDPOINT: 'https://s3.amazonaws.com',
+    S3_REGION: 'us-east-1',
+  }
+
+  const RealDate = Date
+
+  beforeEach(() => {
+    Object.assign(process.env, EXAMPLE)
+
+    const frozen = new RealDate('2013-05-24T00:00:00Z').getTime()
+
+    // Only the no-argument form is frozen, which is the one lib/storage.ts
+    // uses for its timestamp. Everything else is passed through, so a date
+    // built from a literal still means what it says.
+    class Frozen extends RealDate {
+      constructor(...args: [] | [number | string | Date]) {
+        super(args.length === 0 ? frozen : (args[0] as number))
+      }
+      static now() {
+        return frozen
+      }
+    }
+    globalThis.Date = Frozen as unknown as DateConstructor
+  })
+
+  afterEach(() => {
+    globalThis.Date = RealDate
+  })
+
+  it('matches a signature computed outside this codebase', () => {
+    const url = new URL(signedDownloadUrl('test.txt', { expires: 86400 }))
+
+    assert.equal(
+      url.searchParams.get('X-Amz-Signature'),
+      '3ed0be64024db54d5574a27da223529635c383f911f80e636f0ccc13890053d2',
+    )
+  })
+
+  it('puts the credential scope together the way S3 reads it', () => {
+    const url = new URL(signedDownloadUrl('test.txt', { expires: 86400 }))
+
+    assert.equal(
+      url.searchParams.get('X-Amz-Credential'),
+      'AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request',
+    )
+    assert.equal(url.searchParams.get('X-Amz-Date'), '20130524T000000Z')
+  })
+
+  it('signs an upload differently from a download of the same key', () => {
+    // The method is part of the canonical request. If it were not, a link
+    // handed out for reading would also be a link for overwriting.
+    const read = new URL(signedDownloadUrl('test.txt', { expires: 86400 }))
+    const write = new URL(signedUploadUrl('test.txt', 86400))
+
+    assert.notEqual(
+      read.searchParams.get('X-Amz-Signature'),
+      write.searchParams.get('X-Amz-Signature'),
+    )
+  })
+})
