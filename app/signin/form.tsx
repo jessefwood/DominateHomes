@@ -1,5 +1,7 @@
 'use client'
 
+import { runAction } from '@/lib/client-action'
+
 import { useState, useTransition } from 'react'
 import { requestLink } from './actions'
 
@@ -18,7 +20,7 @@ export function SignInForm() {
     }
     setError(null)
     startTransition(async () => {
-      const result = await requestLink(value)
+      const result = await runAction(() => requestLink(value))
       if (result.error) setError(result.error)
       else setSent(true)
     })

@@ -1,5 +1,7 @@
 'use client'
 
+import { runAction } from '@/lib/client-action'
+
 import { useState, useTransition } from 'react'
 import { Pill } from '@/components/ui'
 import { formatCents } from '@/lib/money'
@@ -52,7 +54,7 @@ export function OptionPicker({
   function choose(slot: Slot) {
     setError(null)
     startTransition(async () => {
-      const result = await pickOption(selectionId, slot, projectSlug, roomSlug)
+      const result = await runAction(() => pickOption(selectionId, slot, projectSlug, roomSlug))
       if (result.error) setError(result.error)
     })
   }
@@ -60,7 +62,7 @@ export function OptionPicker({
   function clear() {
     setError(null)
     startTransition(async () => {
-      const result = await unpickOption(selectionId, projectSlug, roomSlug)
+      const result = await runAction(() => unpickOption(selectionId, projectSlug, roomSlug))
       if (result.error) setError(result.error)
     })
   }

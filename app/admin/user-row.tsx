@@ -1,5 +1,7 @@
 'use client'
 
+import { runAction } from '@/lib/client-action'
+
 import { useState, useTransition } from 'react'
 import { Pill } from '@/components/ui'
 import { setSignIn } from './users-actions'
@@ -23,7 +25,7 @@ export function UserRow({
   function toggle() {
     setError(null)
     startTransition(async () => {
-      const result = await setSignIn(id, !signInEnabled)
+      const result = await runAction(() => setSignIn(id, !signInEnabled))
       if (result.error) setError(result.error)
     })
   }
