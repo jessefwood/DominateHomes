@@ -191,3 +191,32 @@ describe('magic link sign-in', () => {
     assert.equal(await userForSessionToken(undefined), null)
   })
 })
+
+/**
+ * Locking someone out has to end the access they already have, not just stop
+ * them getting new links. Production proved why this matters: signInEnabled
+ * was added by migration, every existing row took the default of true, and a
+ * client who was supposed to be locked out could sign in.
+ */
+describe('closing access', () => {
+  beforeEach(reset)
+  after(() => prisma.$disconnect())
+
+  it('kills a live session when access is closed', async () => {
+    const user = await makeUser()
+    const issued = await requestSignInLink(user.email, BASE)
+    if (!issued.sent) throw new Error('expected a link')
+    const redeemed = await redeemSignInLink(issued.token)
+    if (!redeemed.ok) throw new Error('expected a session')
+
+    assert.ok(await userForSessionToken(redeemed.sessionToken))
+
+    // What the admin switch does.
+    await prisma.user.update({ where: { id: user.id }, data: { signInEnabled: false } })
+    await prisma.session.deleteMany({ where: { userId: user.id } })
+    await prisma.loginToken.deleteMany({ where: { userId: user.id, usedAt: null } })
+
+    assert.equal(await userForSessionToken(redeemed.sessionToken), null)
+    assert.equal((await requestSignInLink(user.email, BASE)).sent, false)
+  })
+})

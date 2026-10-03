@@ -3,6 +3,7 @@ import { Role } from '@prisma/client'
 import { Card, PageHeader, Pill } from '@/components/ui'
 import { listIntegrations } from '@/lib/integrations'
 import { prisma } from '@/lib/db'
+import { UserRow } from './user-row'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,26 +59,22 @@ export default async function AdminOverview() {
 
         <Card className="divide-y divide-ink/10">
           {users.map((user) => (
-            <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div className="min-w-0">
-                <p className="font-medium text-ink">{user.name}</p>
-                <p className="mt-0.5 text-sm text-driftwood">{user.email}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Pill tone={user.role === Role.DESIGNER ? 'ink' : 'neutral'}>
-                  {user.role === Role.DESIGNER ? 'Admin' : 'Client'}
-                </Pill>
-                <Pill tone={user.signInEnabled ? 'sea' : 'clay'}>
-                  {user.signInEnabled ? 'Can sign in' : 'Locked out'}
-                </Pill>
-              </div>
-            </div>
+            <UserRow
+              key={user.id}
+              id={user.id}
+              name={user.name}
+              email={user.email}
+              isDesigner={user.role === Role.DESIGNER}
+              signInEnabled={user.signInEnabled}
+            />
           ))}
         </Card>
 
         <p className="text-sm leading-relaxed text-driftwood">
           A client stays locked out until the proposal and the design services agreement exist. While they are
-          locked out, asking for a sign-in link does nothing at all, even for someone holding the address.
+          locked out, asking for a sign-in link does nothing at all, even for someone holding the address, and
+          any session they already had is ended. Letting someone in is a business decision, so it lives here
+          rather than in the code.
         </p>
       </section>
     </div>
