@@ -134,14 +134,16 @@ export async function requestSignInLink(
 
   const link = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${encodeURIComponent(token)}`
 
-  // The email names the project, read from the database so a rename is data
-  // rather than a deploy.
-  const project = await prisma.project.findFirst({
-    orderBy: { createdAt: 'asc' },
-  })
-  const projectName = project?.displayName ?? 'Dominate Homes'
-
-  await mailer().send(signInEmail(user.email, user.name, link, TOKEN_TTL_MINUTES, projectName))
+  // The email names no project, deliberately. It used to name one, and the
+  // one it named was `project.findFirst` ordered by creation: the oldest row
+  // in the whole table, for everybody, with no reference to who was asking.
+  // So a designer with every project on the books got an email headed after
+  // one client's house, and anybody who could ask for a link was told that
+  // client's address whether or not they were on the project.
+  //
+  // Signing in is not about a project. It gets you into the portal, and the
+  // portal shows you the projects you are on.
+  await mailer().send(signInEmail(user.email, user.name, link, TOKEN_TTL_MINUTES))
 
   // Recorded for the account it was issued for, not for every address typed
   // into the form. An attempt on an unknown address returns above this line

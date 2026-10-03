@@ -92,21 +92,33 @@ export function mailer(): Mailer {
   return cached
 }
 
-/** The sign-in email itself. Written the way Davina talks. */
-export function signInEmail(
-  to: string,
-  name: string,
-  link: string,
-  minutes: number,
-  projectName: string,
-): Email {
+/**
+ * The sign-in email itself. Written the way Davina talks.
+ *
+ * NAMES NO PROJECT, DELIBERATELY. It used to, and the project it named was
+ * whichever one was created first, for everybody: the oldest row in the whole
+ * table, looked up with no reference to who was signing in. So Jesse asked for
+ * a link and got an email headed "643 Bianca", which reads as though the
+ * portal is one house rather than the business.
+ *
+ * It was also a small leak. Anybody who could ask for a link was told the name
+ * of a project, whether or not they were on it, and that name is a client's
+ * address.
+ *
+ * Signing in is not about a project. It gets you into the portal, and the
+ * portal shows you the projects you are on. So there is no project name to
+ * pass in here any more, and no way to reintroduce one by accident.
+ */
+export function signInEmail(to: string, name: string, link: string, minutes: number): Email {
   const firstName = name.split(' ')[0]
 
   const text = `Hi ${firstName},
 
-Here is your link to open the ${projectName} portal.
+Here is your link to open the Dominate Homes portal.
 
 ${link}
+
+Once you are in you will see everything we are working on for you, and you can open whichever one you want.
 
 It works once and it expires in ${minutes} minutes. If it has run out, just ask for a new one.
 
@@ -120,27 +132,26 @@ Dominate Homes`
   <body style="margin:0;padding:24px;background:#faf8f4;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1a17;">
     <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid rgba(28,26,23,0.12);border-radius:8px;padding:28px;">
       <p style="margin:0 0 4px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#8a7f70;">Dominate Homes</p>
-      <h1 style="margin:0 0 16px;font-family:Georgia,serif;font-size:22px;font-weight:normal;">${projectName}</h1>
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Hi ${firstName}, here is your link to open the portal.</p>
+      <h1 style="margin:0 0 16px;font-family:Georgia,serif;font-size:22px;font-weight:normal;">Sign in</h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Hi ${escapeHtml(firstName)}, here is your link to open the portal.</p>
       <p style="margin:0 0 20px;">
         <a href="${link}" style="display:inline-block;background:#1c1a17;color:#faf8f4;text-decoration:none;padding:11px 20px;border-radius:6px;font-size:15px;">Open the portal</a>
       </p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Once you are in you will see everything we are working on for you, and you can open whichever one you want.</p>
       <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#5f564a;">It works once and it expires in ${minutes} minutes. If it has run out, just ask for a new one.</p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#8a7f70;">If you did not ask for this, you can ignore it. Nobody can get in without the link.</p>
     </div>
   </body>
 </html>`
 
-  return { to, subject: `Your link to the ${projectName} portal`, text, html }
+  return { to, subject: 'Your link to the Dominate Homes portal', text, html }
 }
 
 /**
  * Escaping, for anything in an email that somebody else typed.
  *
- * `signInEmail` above interpolates a name straight into its HTML, which is
- * fine there because every name it can reach was typed by Davina into admin.
- * Everything below this line can carry text from the public request form, and
- * an email body is markup. Angle brackets and quotes out, so a note cannot
+ * An email body is markup, and a name or a note can come from the public
+ * request form. Angle brackets and quotes out, so nothing anybody types can
  * close a tag and open its own.
  */
 function escapeHtml(value: string): string {
