@@ -108,6 +108,27 @@ calls `requireUser()`. Pages inside it do not check for themselves. `/signin`,
 In development, leave `RESEND_API_KEY` unset and links print to the server
 console. No email account needed to work on this.
 
+## Loading the three options per item
+
+The options are loaded from a spreadsheet rather than typed into an admin
+screen. At one project a year, building a screen to enter fifty items times
+three options is a lot of software for a job done once, and a spreadsheet is
+the tool the designer already uses.
+
+```bash
+npm run db:seed              # once, on an empty database
+npm run options:template     # writes options.csv, every item, three rows each
+# fill in label, vendor and price; leave a row blank to skip it
+npm run options:import       # dry run, reports what it would do
+npm run options:import -- --write
+```
+
+The importer refuses the whole file if anything is wrong rather than
+half-loading it: a fourth option for an item, an unknown reference, a price
+that is not a number. Importing an item replaces that item's options rather
+than adding to them, which is the only sane behaviour inside a cap of three,
+and it clears any pick that pointed at an option being replaced.
+
 ## What is not done yet
 
 - **The designer side.** There is no admin UI. Selections, options and order

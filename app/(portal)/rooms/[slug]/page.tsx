@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ApprovalStatus, SelectionStatus, type SelectionOption } from '@prisma/client'
+import { ApprovalStatus, SelectionStatus } from '@prisma/client'
 import { Card, EmptyState, OpenQuestion, PageHeader, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
 import { formatBand, formatCents } from '@/lib/money'
-import { OPTION_SLOTS, SELECTION_STATUS_LABEL } from '@/lib/selections'
+import { SELECTION_STATUS_LABEL } from '@/lib/selections'
 import { currentProject } from '@/lib/session'
+import { ApproveRoom } from './approve'
+import { OptionPicker } from './picker'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,67 +15,6 @@ function statusTone(status: SelectionStatus) {
   if (status === SelectionStatus.PENDING) return 'neutral' as const
   if (status === SelectionStatus.CHOSEN) return 'sea' as const
   return 'ink' as const
-}
-
-/**
- * The picker. Exactly three columns, always, because the data model has
- * exactly three slots. An empty slot renders as an empty slot rather than
- * collapsing, so the shape of the decision is the same on every item: at most
- * three things to compare, never a wall of choices.
- */
-function OptionSlots({
-  options,
-  chosenSlot,
-}: {
-  options: SelectionOption[]
-  chosenSlot: SelectionOption['slot'] | null
-}) {
-  return (
-    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-      {OPTION_SLOTS.map((slot) => {
-        const option = options.find((candidate) => candidate.slot === slot)
-        const chosen = chosenSlot === slot
-
-        if (!option) {
-          return (
-            <div
-              key={slot}
-              className="hairline rounded-md border border-dashed bg-oyster-deep/40 p-3 text-sm text-driftwood"
-            >
-              <p className="text-xs tracking-widest text-driftwood uppercase">Option {slot}</p>
-              <p className="mt-2 leading-relaxed">Davina is still putting this one together.</p>
-            </div>
-          )
-        }
-
-        return (
-          <div
-            key={slot}
-            className={`rounded-md border p-3 text-sm ${
-              chosen ? 'border-seaglass bg-seaglass-wash' : 'hairline border bg-white'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-xs tracking-widest text-driftwood uppercase">Option {slot}</p>
-              {chosen ? <Pill tone="sea">Your pick</Pill> : null}
-            </div>
-            <p className="mt-2 leading-snug font-medium text-ink">{option.label}</p>
-            <p className="mt-1 text-driftwood">{option.vendor}</p>
-            <p className="mt-2 text-ink">{formatCents(option.priceCents)}</p>
-            {option.leadTimeDays ? (
-              <p className="mt-1 text-driftwood">About {option.leadTimeDays} days to arrive</p>
-            ) : null}
-            {option.dimensions ? <p className="mt-1 text-driftwood">{option.dimensions}</p> : null}
-            {option.nonReturnable ? (
-              <p className="mt-2 text-xs leading-relaxed text-clay">
-                Made to order, so it cannot be returned once the vendor confirms it.
-              </p>
-            ) : null}
-          </div>
-        )
-      })}
-    </div>
-  )
 }
 
 export default async function RoomPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -96,6 +37,24 @@ export default async function RoomPage({ params }: { params: Promise<{ slug: str
 
   const size = room.widthFt && room.lengthFt ? `${room.widthFt} by ${room.lengthFt} feet` : null
   const picked = room.selections.filter((s) => s.status !== SelectionStatus.PENDING).length
+
+  const approved = room.approvalStatus === ApprovalStatus.APPROVED
+
+  // A room can be signed off once every item in it has a pick. Rooms are
+  // approved as a whole so the pieces are judged against each other.
+  const readyToApprove =
+    !approved &&
+    room.selections.length > 0 &&
+    room.selections.every((selection) => selection.chosenOption !== null)
+
+  const roomTotalCents = room.selections.reduce(
+    (sum, selection) => sum + (selection.chosenOption?.priceCents ?? 0) * selection.qty,
+    0,
+  )
+
+  const nonReturnableItems = room.selections
+    .filter((selection) => selection.chosenOption?.nonReturnable)
+    .map((selection) => selection.name)
 
   return (
     <div className="space-y-8">
@@ -171,12 +130,36 @@ export default async function RoomPage({ params }: { params: Promise<{ slug: str
                   <p className="mt-2 text-sm leading-relaxed text-driftwood-deep">{selection.notes}</p>
                 ) : null}
 
-                <OptionSlots options={selection.options} chosenSlot={selection.chosenSlot} />
+                <OptionPicker
+                  selectionId={selection.id}
+                  slug={room.slug}
+                  options={selection.options.map((option) => ({
+                    slot: option.slot,
+                    label: option.label,
+                    vendor: option.vendor,
+                    priceCents: option.priceCents,
+                    leadTimeDays: option.leadTimeDays,
+                    dimensions: option.dimensions,
+                    nonReturnable: option.nonReturnable,
+                  }))}
+                  chosenSlot={selection.chosenSlot}
+                  locked={selection.status !== SelectionStatus.PENDING && selection.status !== SelectionStatus.CHOSEN}
+                />
               </Card>
             ))}
           </div>
         )}
       </section>
+
+      {readyToApprove ? (
+        <ApproveRoom
+          roomId={room.id}
+          roomName={room.name}
+          slug={room.slug}
+          totalCents={roomTotalCents}
+          nonReturnableItems={nonReturnableItems}
+        />
+      ) : null}
 
       {room.reusePieces.length > 0 ? (
         <section className="space-y-3">

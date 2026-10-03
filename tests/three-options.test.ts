@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
 import { OptionSlot } from '@prisma/client'
-import { addOption, chooseOption, setOptions, TooManyOptionsError } from '../lib/selections'
+import {
+  addOption,
+  chooseOption,
+  clearChoice,
+  SelectionLockedError,
+  setOptions,
+  TooManyOptionsError,
+} from '../lib/selections'
 import { fixture, option, prisma, reset } from './helpers'
 
 /**
@@ -97,5 +104,32 @@ describe('three options per item is structural', () => {
     const after = await prisma.selection.findUniqueOrThrow({ where: { id: selection.id } })
     assert.equal(after.chosenSlot, null)
     assert.equal(after.status, 'PENDING')
+  })
+
+  it('locks a pick once the room is approved', async () => {
+    const { selection } = await fixture()
+    await setOptions(selection.id, [option('One', 100), option('Two', 200)])
+    await chooseOption(selection.id, OptionSlot.A)
+
+    // Approving snapshots a price against this exact option. Letting the pick
+    // change afterwards would make the signed record describe something she
+    // did not agree to.
+    await prisma.selection.update({ where: { id: selection.id }, data: { status: 'APPROVED' } })
+
+    await assert.rejects(() => chooseOption(selection.id, OptionSlot.B), SelectionLockedError)
+    await assert.rejects(() => clearChoice(selection.id), SelectionLockedError)
+
+    const after = await prisma.selection.findUniqueOrThrow({ where: { id: selection.id } })
+    assert.equal(after.chosenSlot, OptionSlot.A)
+  })
+
+  it('still allows a change before approval', async () => {
+    const { selection } = await fixture()
+    await setOptions(selection.id, [option('One', 100), option('Two', 200)])
+    await chooseOption(selection.id, OptionSlot.A)
+    await chooseOption(selection.id, OptionSlot.B)
+
+    const after = await prisma.selection.findUniqueOrThrow({ where: { id: selection.id } })
+    assert.equal(after.chosenSlot, OptionSlot.B)
   })
 })

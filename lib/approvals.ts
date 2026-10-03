@@ -6,6 +6,9 @@ import {
   type Prisma,
 } from '@prisma/client'
 import { prisma } from './db'
+import { APPROVAL_STATEMENT } from './approval-statement'
+
+export { APPROVAL_STATEMENT }
 
 /**
  * RULE 3 LIVES HERE.
@@ -19,17 +22,6 @@ import { prisma } from './db'
  * module updates an existing approval: to change an approved room you sign a
  * new one, and the old record stands.
  */
-
-/**
- * The wording shown above the signature. Stored verbatim on the approval, so
- * the record shows what she was told on the day rather than whatever the
- * template says later. Custom goods cannot be returned and that has to be said
- * at the point of signing, not in a footer.
- */
-export const APPROVAL_STATEMENT =
-  'I have reviewed the items listed here and I am approving them for order at the prices shown. ' +
-  'I understand these prices are the ones recorded today, and that items marked non-returnable are ' +
-  'made or cut to order and cannot be returned, exchanged or cancelled once the vendor acknowledges them.'
 
 export class NothingToApproveError extends Error {
   constructor(roomName: string) {

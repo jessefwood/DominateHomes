@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
     "start:prod": "prisma migrate deploy && next start",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "options:template": "tsx scripts/options-template.ts",
+    "options:import": "tsx scripts/options-import.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
