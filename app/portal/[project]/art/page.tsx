@@ -1,7 +1,8 @@
 import { ArtDecision, ReframeStatus } from '@prisma/client'
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,8 +13,14 @@ const REFRAME_COPY: Record<ReframeStatus, string | null> = {
   DONE: 'Reframed',
 }
 
-export default async function ArtPage() {
-  const project = await currentProject()
+export default async function ArtPage({
+  params,
+}: {
+  params: Promise<{ project: string }>
+}) {
+  const { project: projectSlug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
   const pieces = await prisma.artPiece.findMany({
     where: { projectId: project.id },
     orderBy: [{ decision: 'asc' }, { title: 'asc' }],

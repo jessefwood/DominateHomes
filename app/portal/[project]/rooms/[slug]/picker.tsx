@@ -33,13 +33,15 @@ export type PickableOption = {
  */
 export function OptionPicker({
   selectionId,
-  slug,
+  projectSlug,
+  roomSlug,
   options,
   chosenSlot,
   locked,
 }: {
   selectionId: string
-  slug: string
+  projectSlug: string
+  roomSlug: string
   options: PickableOption[]
   chosenSlot: Slot | null
   locked: boolean
@@ -50,7 +52,7 @@ export function OptionPicker({
   function choose(slot: Slot) {
     setError(null)
     startTransition(async () => {
-      const result = await pickOption(selectionId, slot, slug)
+      const result = await pickOption(selectionId, slot, projectSlug, roomSlug)
       if (result.error) setError(result.error)
     })
   }
@@ -58,7 +60,7 @@ export function OptionPicker({
   function clear() {
     setError(null)
     startTransition(async () => {
-      const result = await unpickOption(selectionId, slug)
+      const result = await unpickOption(selectionId, projectSlug, roomSlug)
       if (result.error) setError(result.error)
     })
   }

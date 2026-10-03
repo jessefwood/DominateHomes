@@ -5,7 +5,8 @@ import { Card, EmptyState, OpenQuestion, PageHeader, Pill } from '@/components/u
 import { prisma } from '@/lib/db'
 import { formatBand, formatCents } from '@/lib/money'
 import { SELECTION_STATUS_LABEL } from '@/lib/selections'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 import { ApproveRoom } from './approve'
 import { OptionPicker } from './picker'
 
@@ -17,9 +18,14 @@ function statusTone(status: SelectionStatus) {
   return 'ink' as const
 }
 
-export default async function RoomPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  const project = await currentProject()
+export default async function RoomPage({
+  params,
+}: {
+  params: Promise<{ project: string; slug: string }>
+}) {
+  const { project: projectSlug, slug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
 
   const room = await prisma.room.findUnique({
     where: { projectId_slug: { projectId: project.id, slug } },
@@ -59,7 +65,7 @@ export default async function RoomPage({ params }: { params: Promise<{ slug: str
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/portal/rooms" className="text-sm text-driftwood hover:text-ink">
+        <Link href={`/portal/${project}/rooms`} className="text-sm text-driftwood hover:text-ink">
           Back to all rooms
         </Link>
       </div>
@@ -132,7 +138,8 @@ export default async function RoomPage({ params }: { params: Promise<{ slug: str
 
                 <OptionPicker
                   selectionId={selection.id}
-                  slug={room.slug}
+                  projectSlug={project.slug}
+                  roomSlug={room.slug}
                   options={selection.options.map((option) => ({
                     slot: option.slot,
                     label: option.label,
@@ -155,7 +162,8 @@ export default async function RoomPage({ params }: { params: Promise<{ slug: str
         <ApproveRoom
           roomId={room.id}
           roomName={room.name}
-          slug={room.slug}
+          projectSlug={project.slug}
+          roomSlug={room.slug}
           totalCents={roomTotalCents}
           nonReturnableItems={nonReturnableItems}
         />

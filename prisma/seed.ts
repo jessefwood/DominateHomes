@@ -87,6 +87,7 @@ async function main() {
   await prisma.selection.updateMany({ data: { chosenSlot: null, chosenAt: null } })
 
   await prisma.$transaction([
+    prisma.projectMember.deleteMany(),
     prisma.approvalLine.deleteMany(),
     prisma.approval.deleteMany(),
     prisma.purchaseOrder.deleteMany(),
@@ -161,6 +162,13 @@ async function main() {
       earliestCloseOn: new Date('2027-04-01T00:00:00Z'),
       installAfterOn: new Date('2027-04-01T00:00:00Z'),
     },
+  })
+
+  // Abbie can see this project. Designers are not listed: they see every
+  // project by role, so a row per designer per project would be bookkeeping
+  // that only ever goes out of date.
+  await prisma.projectMember.create({
+    data: { projectId: project.id, userId: abbie.id, label: 'Abbie and Russell' },
   })
 
   // -------------------------------------------------------------------------

@@ -16,13 +16,15 @@ import { approveRoom } from './actions'
 export function ApproveRoom({
   roomId,
   roomName,
-  slug,
+  projectSlug,
+  roomSlug,
   totalCents,
   nonReturnableItems,
 }: {
   roomId: string
   roomName: string
-  slug: string
+  projectSlug: string
+  roomSlug: string
   totalCents: number
   nonReturnableItems: string[]
 }) {
@@ -43,7 +45,7 @@ export function ApproveRoom({
     }
     setError(null)
     startTransition(async () => {
-      const result = await approveRoom(roomId, name, slug)
+      const result = await approveRoom(roomId, name, projectSlug, roomSlug)
       if (result.error) setError(result.error)
     })
   }

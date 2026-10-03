@@ -1,13 +1,20 @@
 import { OpenItemOwner, OpenItemStatus } from '@prisma/client'
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 import { AnswerBox } from './answer-box'
 
 export const dynamic = 'force-dynamic'
 
-export default async function OpenItemsPage() {
-  const project = await currentProject()
+export default async function OpenItemsPage({
+  params,
+}: {
+  params: Promise<{ project: string }>
+}) {
+  const { project: projectSlug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
   const items = await prisma.openItem.findMany({
     where: { projectId: project.id },
     orderBy: [{ owner: 'asc' }, { order: 'asc' }],
@@ -45,7 +52,7 @@ export default async function OpenItemsPage() {
                 ) : null}
 
                 {item.status === OpenItemStatus.OPEN ? (
-                  <AnswerBox itemId={item.id} />
+                  <AnswerBox itemId={item.id} projectSlug={project.slug} />
                 ) : (
                   <div className="mt-3 rounded-md bg-seaglass-wash p-3 text-sm leading-relaxed text-driftwood-deep">
                     <p className="text-xs tracking-widest text-seaglass-deep uppercase">Your answer</p>

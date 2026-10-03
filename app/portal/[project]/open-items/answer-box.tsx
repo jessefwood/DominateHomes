@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { answerOpenItem } from './actions'
 
-export function AnswerBox({ itemId }: { itemId: string }) {
+export function AnswerBox({ itemId, projectSlug }: { itemId: string; projectSlug: string }) {
   const [value, setValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -16,7 +16,7 @@ export function AnswerBox({ itemId }: { itemId: string }) {
     }
     setError(null)
     startTransition(async () => {
-      const result = await answerOpenItem(itemId, answer)
+      const result = await answerOpenItem(itemId, answer, projectSlug)
       if (result?.error) setError(result.error)
     })
   }

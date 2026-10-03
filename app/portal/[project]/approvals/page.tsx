@@ -3,12 +3,19 @@ import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
 import { APPROVAL_STATEMENT } from '@/lib/approvals'
 import { prisma } from '@/lib/db'
 import { formatCents } from '@/lib/money'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ApprovalsPage() {
-  const project = await currentProject()
+export default async function ApprovalsPage({
+  params,
+}: {
+  params: Promise<{ project: string }>
+}) {
+  const { project: projectSlug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
 
   const approvals = await prisma.approval.findMany({
     where: { room: { projectId: project.id } },

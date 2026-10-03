@@ -2,7 +2,6 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Role, type User } from '@prisma/client'
 import { SESSION_COOKIE, userForSessionToken } from './auth'
-import { prisma } from './db'
 
 /**
  * Reading who is signed in. Every screen goes through here.
@@ -26,11 +25,10 @@ export async function requireDesigner(): Promise<User> {
   return user
 }
 
-export async function currentProject() {
-  const project = await prisma.project.findFirst({ orderBy: { createdAt: 'asc' } })
-  if (!project) throw new Error('No project found. Run the seed.')
-  return project
-}
+// There is deliberately no currentProject() here any more. It returned
+// whichever project happened to be first, which was fine when there was one
+// and is a data leak when there is more than one. Screens resolve the project
+// from the URL and check access: see requireProjectAccess in lib/projects.ts.
 
 /**
  * The base URL sign-in links are built from. Must be set in production: a link

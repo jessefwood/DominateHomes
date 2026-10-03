@@ -69,6 +69,7 @@ model User {
   loginTokens   LoginToken[]
   sessions      Session[]
   integrations  Integration[]
+  memberships   ProjectMember[]
 
   @@index([role])
 }
@@ -149,6 +150,7 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  members      ProjectMember[]
   rooms        Room[]
   budgetLines  BudgetLine[]
   reusePieces  ReusePiece[]
@@ -612,6 +614,31 @@ model PurchaseOrder {
   note      String?
 
   @@index([status])
+}
+
+/// Which clients can see which project.
+///
+/// Designers are not listed here. They see every project by role, because
+/// they run all of them and maintaining a row per designer per project would
+/// be bookkeeping that only ever goes wrong.
+///
+/// A client sees a project only if there is a row here. That is the whole
+/// access rule, and it is a join rather than a column so one household can
+/// have two people on the same project, and one client can have two houses.
+model ProjectMember {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// How they are described to themselves, e.g. "Abbie and Russell".
+  label String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------

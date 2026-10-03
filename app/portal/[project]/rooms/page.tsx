@@ -2,7 +2,8 @@ import { ApprovalStatus, RoomTier, SelectionStatus } from '@prisma/client'
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
 import { formatBand, formatCents } from '@/lib/money'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,8 +18,14 @@ function dimensions(widthFt: number | null, lengthFt: number | null) {
   return `${widthFt} by ${lengthFt} feet`
 }
 
-export default async function RoomsPage() {
-  const project = await currentProject()
+export default async function RoomsPage({
+  params,
+}: {
+  params: Promise<{ project: string }>
+}) {
+  const { project: projectSlug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
 
   const rooms = await prisma.room.findMany({
     where: { projectId: project.id },
@@ -47,7 +54,7 @@ export default async function RoomsPage() {
           const size = dimensions(room.widthFt, room.lengthFt)
 
           return (
-            <Card key={room.id} href={`/portal/rooms/${room.slug}`} className="p-5">
+            <Card key={room.id} href={`/portal/${project.slug}/rooms/${room.slug}`} className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="font-display text-lg leading-tight text-ink">{room.name}</h2>

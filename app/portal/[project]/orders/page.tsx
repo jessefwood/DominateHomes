@@ -2,7 +2,8 @@ import { OrderStatus } from '@prisma/client'
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
 import { formatCents } from '@/lib/money'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +15,14 @@ const STATUS_COPY: Record<OrderStatus, string> = {
   DAMAGED: 'Arrived damaged',
 }
 
-export default async function OrdersPage() {
-  const project = await currentProject()
+export default async function OrdersPage({
+  params,
+}: {
+  params: Promise<{ project: string }>
+}) {
+  const { project: projectSlug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
 
   const orders = await prisma.purchaseOrder.findMany({
     where: { selection: { room: { projectId: project.id } } },

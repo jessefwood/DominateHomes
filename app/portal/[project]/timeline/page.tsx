@@ -1,11 +1,18 @@
 import { Card, PageHeader, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
-export default async function TimelinePage() {
-  const project = await currentProject()
+export default async function TimelinePage({
+  params,
+}: {
+  params: Promise<{ project: string }>
+}) {
+  const { project: projectSlug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
   const milestones = await prisma.milestone.findMany({
     where: { projectId: project.id },
     orderBy: { order: 'asc' },

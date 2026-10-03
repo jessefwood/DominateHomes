@@ -2,12 +2,19 @@ import { KeepStatus } from '@prisma/client'
 import { Card, PageHeader, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
 import { formatBand } from '@/lib/money'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
-export default async function PiecesPage() {
-  const project = await currentProject()
+export default async function PiecesPage({
+  params,
+}: {
+  params: Promise<{ project: string }>
+}) {
+  const { project: projectSlug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
   const pieces = await prisma.reusePiece.findMany({
     where: { projectId: project.id },
     orderBy: [{ inventoryNo: 'asc' }, { name: 'asc' }],

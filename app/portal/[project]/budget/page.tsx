@@ -3,7 +3,8 @@ import { Card, EmptyState, PageHeader } from '@/components/ui'
 import { BUDGET_TYPE_LABEL, budgetTotals, consumedCents, type SideTotals } from '@/lib/budget'
 import { prisma } from '@/lib/db'
 import { formatCents } from '@/lib/money'
-import { currentProject } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/projects'
+import { requireUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,8 +51,14 @@ function SideColumn({
   )
 }
 
-export default async function BudgetPage() {
-  const project = await currentProject()
+export default async function BudgetPage({
+  params,
+}: {
+  params: Promise<{ project: string }>
+}) {
+  const { project: projectSlug } = await params
+  const user = await requireUser()
+  const project = await requireProjectAccess(user, projectSlug)
 
   const [totals, lines] = await Promise.all([
     budgetTotals(project.id),
