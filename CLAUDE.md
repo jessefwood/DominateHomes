@@ -44,6 +44,29 @@ costs nothing.
 Written the way Davina talks. No em dashes. Few inline links, especially near
 the top. Speaking directly to Abbie, not at her.
 
+## Slack
+
+Workspace: `dominatehomes.slack.com`.
+
+**`#claude-handoff` (private) is the handoff channel. All of it, every
+project.** Anything a human or Cowork has to do in a browser that a cloud
+session cannot reach goes here: Railway, DNS, Resend, Stripe, GitHub settings.
+Post one numbered task, first line naming the project, and ask for a reply in
+thread after each step.
+
+Per-project discussion goes in that project's own channel. The current one is
+`#plan-643-bianca-psl`.
+
+Write handoffs for someone non-technical. Say which page, which button, what
+should happen, and what to do when it does not. Never hand a step back with
+"configure DNS" and leave it there.
+
+Values that need to come back, a CNAME target or an ID, go in the thread. **API
+keys never do.** They go straight into Railway.
+
+Claude cannot archive a channel, rename one, or convert it to private through
+the Slack tools it has. Those are asks for a person.
+
 ## Naming a project
 
 Projects are named and addressed by **street number and street name**, not by
