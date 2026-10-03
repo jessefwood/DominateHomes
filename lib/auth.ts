@@ -65,6 +65,12 @@ export async function requestSignInLink(rawEmail: string, baseUrl: string): Prom
 
   if (!user) return { sent: false }
 
+  // An account that is not open yet behaves exactly like one that does not
+  // exist: no link, no email, and the same answer to the browser. The client
+  // is in the database well before she should be let in, and the designer
+  // decides when that changes.
+  if (!user.signInEnabled) return { sent: false }
+
   const since = new Date(Date.now() - WINDOW_MINUTES * 60_000)
   const recent = await prisma.loginToken.count({
     where: { userId: user.id, createdAt: { gte: since } },

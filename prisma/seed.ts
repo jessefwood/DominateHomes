@@ -61,6 +61,11 @@ async function main() {
       email: 'abbieg323@gmail.com',
       name: 'Abbie Grossman',
       role: Role.CLIENT,
+      // Deliberately closed. The pricing proposal and the design services
+      // agreement both have to exist before Abbie is let in, and that is
+      // Davina's call to make. Flip this to true when she says so. Until then
+      // asking for a link does nothing, even if someone has the URL.
+      signInEnabled: false,
     },
   })
 

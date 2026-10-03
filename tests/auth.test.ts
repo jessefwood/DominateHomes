@@ -30,6 +30,42 @@ describe('magic link sign-in', () => {
     assert.equal(await prisma.loginToken.count({ where: { userId: user.id } }), 1)
   })
 
+  it('sends nothing for an account that is not open yet', async () => {
+    // Abbie exists in the database long before she should be let in. A closed
+    // account must behave exactly like an unknown address: no link, no email,
+    // and nothing the browser can tell apart.
+    const user = await prisma.user.create({
+      data: {
+        email: 'client@example.invalid',
+        name: 'Abbie Grossman',
+        role: Role.CLIENT,
+        signInEnabled: false,
+      },
+    })
+
+    const result = await requestSignInLink(user.email, BASE)
+
+    assert.equal(result.sent, false)
+    assert.equal(await prisma.loginToken.count({ where: { userId: user.id } }), 0)
+  })
+
+  it('lets the same account in once it is opened', async () => {
+    const user = await prisma.user.create({
+      data: {
+        email: 'client2@example.invalid',
+        name: 'Abbie Grossman',
+        role: Role.CLIENT,
+        signInEnabled: false,
+      },
+    })
+
+    assert.equal((await requestSignInLink(user.email, BASE)).sent, false)
+
+    await prisma.user.update({ where: { id: user.id }, data: { signInEnabled: true } })
+
+    assert.equal((await requestSignInLink(user.email, BASE)).sent, true)
+  })
+
   it('sends nothing for an unknown address and does not create a user', async () => {
     const result = await requestSignInLink('stranger@example.invalid', BASE)
 

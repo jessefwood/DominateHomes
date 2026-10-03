@@ -54,6 +54,16 @@ model User {
   role      Role
   createdAt DateTime @default(now())
 
+  /// Whether this person can request a sign-in link at all.
+  ///
+  /// A client account exists in the database long before the client should be
+  /// let in: the pricing proposal and the design services agreement have to
+  /// exist first, and the designer decides when. This makes "not yet" a
+  /// property of the account rather than something everyone has to remember
+  /// not to do. Requesting a link for a disabled account behaves exactly like
+  /// requesting one for an address that does not exist.
+  signInEnabled Boolean @default(true)
+
   approvals     Approval[]
   answeredItems OpenItem[] @relation("AnsweredBy")
   loginTokens   LoginToken[]

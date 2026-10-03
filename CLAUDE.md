@@ -39,6 +39,20 @@ If a token ends up somewhere public (a chat, a screenshot, a commit), rotate
 it in Railway under Project Settings, Tokens. Rotating takes a minute and
 costs nothing.
 
+## Letting a client in
+
+A client account exists in the database long before the client should be let
+in. `User.signInEnabled` controls it, and it is `false` for Abbie on purpose.
+
+The pricing proposal and the design services agreement both have to exist
+first, and the designer decides when. Until then, asking for a link does
+nothing even for someone holding the URL, and a closed account is
+indistinguishable from an address that is not on the project.
+
+Open it by setting `signInEnabled` to true for that user, and only when the
+designer says so. Do not relax it to make testing easier; sign in as a designer
+account instead.
+
 ## Client-facing copy
 
 Written the way Davina talks. No em dashes. Few inline links, especially near
