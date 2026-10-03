@@ -815,6 +815,8 @@ model ProposalLine {
   amountCents Int
   order       Int
 
+  stage PaymentStage
+
   @@index([proposalId])
 }
 
@@ -837,7 +839,26 @@ model ProposalPayment {
   paidAt  DateTime?
   paidRef String?
 
+  /// The Stripe Checkout Session opened for this instalment, and the
+  /// PaymentIntent it produced. Kept so a settled payment traces back to the
+  /// exact row it belongs to without matching on amount.
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String? @unique
+
   @@index([proposalId])
+}
+
+/// Which instalment a charge is, stamped on the Stripe charge as metadata.
+///
+/// Without it, telling a deposit from a balance payment means comparing
+/// amounts and guessing, which stops working the moment two projects run at
+/// once or a schedule is renegotiated.
+enum PaymentStage {
+  DEPOSIT
+  GOODS_1
+  GOODS_2
+  FINAL
+  OTHER
 }
 
 enum ProposalScopeKind {

@@ -1,5 +1,6 @@
 import {
   BudgetType,
+  type PaymentStage,
   ProposalScopeKind,
   ProposalStatus,
   ProposalTier,
@@ -8,6 +9,7 @@ import {
   type ProposalPayment,
 } from '@prisma/client'
 import { prisma } from './db'
+import { stageForPosition } from './payments'
 import { PROPOSAL_STATEMENT } from './proposal-statement'
 
 export { PROPOSAL_STATEMENT }
@@ -116,6 +118,13 @@ export type PaymentInput = {
   whenLabel: string
   detail?: string
   amountCents: number
+  /**
+   * Which instalment this is, for the Stripe charge metadata. Defaults from
+   * position in the schedule: first is the deposit, last is the final payment,
+   * the ones between are goods. Pass it explicitly where a schedule does not
+   * follow that shape.
+   */
+  stage?: PaymentStage
 }
 
 export type DraftProposalInput = {
@@ -269,6 +278,10 @@ export async function draftProposal(input: DraftProposalInput): Promise<Proposal
           detail: row.detail ?? null,
           amountCents: row.amountCents,
           order: index,
+          // Required with no default, deliberately: a charge that reaches
+          // Stripe without a stage cannot be reconciled afterwards except by
+          // comparing amounts, and retrofitting means hand tagging history.
+          stage: row.stage ?? stageForPosition(index, input.payments.length),
         })),
       },
       scope: {
