@@ -39,6 +39,20 @@ If a token ends up somewhere public (a chat, a screenshot, a commit), rotate
 it in Railway under Project Settings, Tokens. Rotating takes a minute and
 costs nothing.
 
+## Seeding
+
+`npm run db:seed` wipes every table and rebuilds from the source documents in
+`docs/`. It is correct exactly once, on an empty database.
+
+It refuses to run once the database holds a real client decision: an approval,
+a chosen option, an order, or an answered open item. `FORCE_SEED=yes`
+overrides, and exists for a deliberate reset, not for getting past an
+unexpected refusal. If it refuses and you did not mean to erase the project,
+stop and ask rather than forcing it.
+
+Re-seeding data nobody has touched is still allowed, because that is harmless
+while building.
+
 ## Letting a client in
 
 A client account exists in the database long before the client should be let

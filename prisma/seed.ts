@@ -28,7 +28,57 @@ const prisma = new PrismaClient({
 
 const d = (amount: number) => Math.round(amount * 100)
 
+/**
+ * Refuses to run if the database already holds real client decisions.
+ *
+ * The seed wipes every table and rebuilds from the source documents. That is
+ * correct exactly once, on an empty database. Run it again after the client
+ * has picked options, signed off a room or answered a question and that work
+ * is gone, with no undo.
+ *
+ * A warning in a document only holds while everyone remembers it, and the
+ * people running this are not necessarily the people who wrote it. So the
+ * check lives here. Re-seeding a database that nobody has touched yet is
+ * still allowed, because that is harmless and useful while building.
+ *
+ * FORCE_SEED=yes overrides it. That exists for a deliberate reset, not for
+ * getting past a refusal you did not expect. If this refuses and you were not
+ * intending to destroy client decisions, stop and ask.
+ */
+async function assertSafeToSeed() {
+  const [approvals, chosen, orders, answered] = await Promise.all([
+    prisma.approval.count(),
+    prisma.selection.count({ where: { chosenSlot: { not: null } } }),
+    prisma.purchaseOrder.count(),
+    prisma.openItem.count({ where: { answer: { not: null } } }),
+  ])
+
+  const decisions = approvals + chosen + orders + answered
+  if (decisions === 0) return
+
+  if (process.env.FORCE_SEED === 'yes') {
+    console.warn(
+      `\nFORCE_SEED is set. Destroying ${decisions} client decision(s): ` +
+        `${approvals} approval(s), ${chosen} chosen item(s), ${orders} order(s), ` +
+        `${answered} answered question(s).\n`,
+    )
+    return
+  }
+
+  throw new Error(
+    `Refusing to seed. This database holds ${decisions} real client decision(s): ` +
+      `${approvals} approval(s), ${chosen} chosen item(s), ${orders} order(s), ` +
+      `${answered} answered question(s).\n\n` +
+      'Seeding wipes every table and there is no undo. If you are seeing this, ' +
+      'the database has already been set up and does not need seeding again.\n\n' +
+      'If you genuinely mean to erase the project and start over, run it again ' +
+      'with FORCE_SEED=yes.',
+  )
+}
+
 async function main() {
+  await assertSafeToSeed()
+
   // Order matters only for foreign keys; everything else is idempotent via
   // deleteMany so the seed can be re-run while the portal is being built.
   //
