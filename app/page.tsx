@@ -3,7 +3,7 @@ import { SiteFooter, SiteNav } from '@/components/site-nav'
 
 export const metadata = {
   title: 'Dominate Homes',
-  description: 'Furnishing and styling new builds on the Treasure Coast.',
+  description: 'Furnishing and styling new builds. Based in Chesapeake, Virginia.',
 }
 
 /**
@@ -42,7 +42,7 @@ const TEAM = [
   {
     name: 'Davina Hughes',
     role: 'Selections and styling',
-    body: 'Davina runs the design side: the direction, the room plans, every selection and the install. She works in new builds across the Treasure Coast, and most of her projects start before the drywall is up.',
+    body: 'Davina runs the look: the direction, the room plans, every selection and the install. Most of her projects start before the drywall is up, which is the point at which the decisions that matter are still cheap to make.',
   },
   {
     name: 'Jesse Wood',
@@ -58,7 +58,7 @@ export default function HomePage() {
 
       <main>
         <section className="mx-auto max-w-6xl px-6 pt-20 pb-20 sm:px-10 sm:pt-32 sm:pb-28">
-          <p className="eyebrow">Port St. Lucie, Florida</p>
+          <p className="eyebrow">Chesapeake, Virginia</p>
           <h1 className="font-display mt-6 max-w-4xl text-[2.75rem] leading-[1.04] text-ink sm:text-6xl lg:text-7xl">
             A finished house, not a folder of ideas.
           </h1>
