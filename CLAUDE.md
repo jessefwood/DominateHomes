@@ -29,6 +29,11 @@ change makes a test in `tests/` fail, the change is wrong, not the test.
 Before relaxing one of them, remember each came directly from the client. The
 three-option rule was stated twice.
 
+## Email
+
+Outbound email from the app comes from `info@dominatehomes.com`. That is the
+business address and the one `MAIL_FROM` should use, not an individual's.
+
 ## Secrets
 
 Nothing with a real credential goes in the repo. `.env` is gitignored,

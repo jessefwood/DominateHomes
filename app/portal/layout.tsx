@@ -9,16 +9,19 @@ import { currentProject, requireUser } from '@/lib/session'
  */
 
 const NAV = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/rooms', label: 'Room by room' },
-  { href: '/budget', label: 'Budget' },
-  { href: '/approvals', label: 'Approvals' },
-  { href: '/pieces', label: 'Your pieces' },
-  { href: '/art', label: 'Art' },
-  { href: '/open-items', label: 'Open items' },
-  { href: '/timeline', label: 'Timeline' },
-  { href: '/orders', label: 'Order tracker' },
+  { href: '/portal', label: 'Dashboard' },
+  { href: '/portal/rooms', label: 'Room by room' },
+  { href: '/portal/budget', label: 'Budget' },
+  { href: '/portal/approvals', label: 'Approvals' },
+  { href: '/portal/pieces', label: 'Your pieces' },
+  { href: '/portal/art', label: 'Art' },
+  { href: '/portal/open-items', label: 'Open items' },
+  { href: '/portal/timeline', label: 'Timeline' },
+  { href: '/portal/orders', label: 'Order tracker' },
 ]
+
+/** Private. A client's budget has no business in a search index. */
+export const metadata = { robots: { index: false, follow: false } }
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const [user, project] = await Promise.all([requireUser(), currentProject()])
@@ -26,7 +29,7 @@ export default async function PortalLayout({ children }: { children: React.React
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row lg:gap-12 lg:px-8">
       <aside className="lg:w-56 lg:shrink-0">
-        <Link href="/" className="block">
+        <Link href="/portal" className="block">
           <p className="font-display text-xl leading-tight text-ink">{project.displayName}</p>
           <p className="mt-1 text-xs tracking-wide text-driftwood uppercase">Dominate Homes</p>
         </Link>

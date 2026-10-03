@@ -27,11 +27,11 @@ function explain(error: unknown, fallback: string): Result {
 }
 
 function refresh(slug: string) {
-  revalidatePath(`/rooms/${slug}`)
-  revalidatePath('/rooms')
-  revalidatePath('/budget')
-  revalidatePath('/approvals')
-  revalidatePath('/')
+  revalidatePath(`/portal/rooms/${slug}`)
+  revalidatePath('/portal/rooms')
+  revalidatePath('/portal/budget')
+  revalidatePath('/portal/approvals')
+  revalidatePath('/portal')
 }
 
 export async function pickOption(

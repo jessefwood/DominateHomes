@@ -22,7 +22,7 @@ export async function answerOpenItem(itemId: string, answer: string) {
     },
   })
 
-  revalidatePath('/open-items')
-  revalidatePath('/')
+  revalidatePath('/portal/open-items')
+  revalidatePath('/portal')
   return { ok: true }
 }

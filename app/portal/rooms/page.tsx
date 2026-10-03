@@ -47,7 +47,7 @@ export default async function RoomsPage() {
           const size = dimensions(room.widthFt, room.lengthFt)
 
           return (
-            <Card key={room.id} href={`/rooms/${room.slug}`} className="p-5">
+            <Card key={room.id} href={`/portal/rooms/${room.slug}`} className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="font-display text-lg leading-tight text-ink">{room.name}</h2>

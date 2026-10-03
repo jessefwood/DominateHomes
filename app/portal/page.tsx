@@ -106,7 +106,7 @@ export default async function DashboardPage() {
         <Card className="p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-display text-lg text-ink">What we need from you</h2>
-            <Link href="/open-items" className="text-sm text-driftwood hover:text-ink">
+            <Link href="/portal/open-items" className="text-sm text-driftwood hover:text-ink">
               All of it
             </Link>
           </div>
@@ -126,7 +126,7 @@ export default async function DashboardPage() {
         <Card className="p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-display text-lg text-ink">Money, at a glance</h2>
-            <Link href="/budget" className="text-sm text-driftwood hover:text-ink">
+            <Link href="/portal/budget" className="text-sm text-driftwood hover:text-ink">
               Full budget
             </Link>
           </div>

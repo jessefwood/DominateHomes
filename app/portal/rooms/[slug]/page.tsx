@@ -59,7 +59,7 @@ export default async function RoomPage({ params }: { params: Promise<{ slug: str
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/rooms" className="text-sm text-driftwood hover:text-ink">
+        <Link href="/portal/rooms" className="text-sm text-driftwood hover:text-ink">
           Back to all rooms
         </Link>
       </div>

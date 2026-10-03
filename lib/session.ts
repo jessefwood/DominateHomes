@@ -22,7 +22,7 @@ export async function requireUser(): Promise<User> {
 
 export async function requireDesigner(): Promise<User> {
   const user = await requireUser()
-  if (user.role !== Role.DESIGNER) redirect('/')
+  if (user.role !== Role.DESIGNER) redirect('/portal')
   return user
 }
 

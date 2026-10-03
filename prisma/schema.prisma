@@ -68,6 +68,7 @@ model User {
   answeredItems OpenItem[] @relation("AnsweredBy")
   loginTokens   LoginToken[]
   sessions      Session[]
+  integrations  Integration[]
 
   @@index([role])
 }
@@ -611,4 +612,52 @@ model PurchaseOrder {
   note      String?
 
   @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Integrations
+// ---------------------------------------------------------------------------
+
+enum IntegrationKind {
+  STRIPE
+  RESEND
+}
+
+/// A connected third party service.
+///
+/// Secrets are encrypted at rest with AES-256-GCM before they are written, so
+/// a database dump does not hand someone a live Stripe key. The master key
+/// lives in CREDENTIAL_KEY, which is set in the hosting environment and never
+/// in the repository.
+///
+/// `publicValue` is the half that is safe to render, such as a Stripe
+/// publishable key or the account id. `secretCipher` is the half that is not,
+/// and nothing ever reads it back out to a browser.
+model Integration {
+  id   String          @id @default(cuid())
+  kind IntegrationKind @unique
+
+  /// Shown in the admin screen so it is obvious which account is connected.
+  label       String?
+  publicValue String?
+
+  /// Encrypted. Null until someone connects the service.
+  secretCipher String?
+
+  /// Last four characters of the secret, kept so the screen can show which
+  /// key is in place without revealing it.
+  secretHint String?
+
+  /// Whether the designer has switched it on. A connected service can still
+  /// be held back.
+  enabled Boolean @default(false)
+
+  /// Set by the test button: did the last live call to the service work.
+  lastCheckedAt DateTime?
+  lastCheckOk   Boolean?
+  lastCheckNote String?
+
+  updatedAt       DateTime @updatedAt
+  updatedByUserId String?
+  updatedBy       User?    @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
 }

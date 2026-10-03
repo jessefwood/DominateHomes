@@ -28,7 +28,7 @@ On the app service, Variables tab:
 |---|---|
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
 | `APP_URL` | `https://portal.dominatehomes.com` |
-| `MAIL_FROM` | `Davina Hughes <davina@dominatehomes.com>` |
+| `MAIL_FROM` | `Dominate Homes <info@dominatehomes.com>` |
 | `RESEND_API_KEY` | from the Resend dashboard |
 
 The `${{Postgres.DATABASE_URL}}` syntax is a Railway reference. It stays

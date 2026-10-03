@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/signin?problem=${result.reason}`, request.url))
   }
 
-  const response = NextResponse.redirect(new URL('/', request.url))
+  const response = NextResponse.redirect(new URL('/portal', request.url))
 
   response.cookies.set({
     name: SESSION_COOKIE,
