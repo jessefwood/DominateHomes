@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { projectsForUser, requireProjectAccess } from '@/lib/projects'
+import { clientLabelFor, isDesigner, requireProjectAccess } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
 
 /**
@@ -37,9 +37,10 @@ export default async function PortalLayout({
   const user = await requireUser()
   const project = await requireProjectAccess(user, slug)
 
-  // Only worth offering a way back to the list if there is a list.
-  const others = await projectsForUser(user)
-  const hasMore = others.length > 1
+  // Shown to the design side only: these screens talk to the client in the
+  // second person, so without this an admin reads "waiting on you" about
+  // someone else and has every reason to think the page is broken.
+  const viewingAs = isDesigner(user) ? await clientLabelFor(project.id) : null
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row lg:gap-12 lg:px-8">
@@ -69,11 +70,9 @@ export default async function PortalLayout({
         <div className="hairline mt-8 border-t pt-4">
           <p className="text-sm text-ink">{user.name}</p>
 
-          {hasMore ? (
-            <Link href="/portal" className="mt-1 block text-sm text-driftwood hover:text-ink">
-              Your other projects
-            </Link>
-          ) : null}
+          <Link href="/portal" className="mt-1 block text-sm text-driftwood hover:text-ink">
+            All your projects
+          </Link>
 
           {user.role === 'DESIGNER' ? (
             <Link href="/admin" className="mt-1 block text-sm text-driftwood hover:text-ink">
@@ -92,7 +91,15 @@ export default async function PortalLayout({
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 pb-16">{children}</main>
+      <main className="min-w-0 flex-1 pb-16">
+        {viewingAs ? (
+          <p className="bg-clay-wash text-clay-deep mb-6 rounded px-4 py-2.5 text-sm">
+            This is {viewingAs}&rsquo;s view of the project. Anywhere a page says
+            &ldquo;you&rdquo;, it means them, not you.
+          </p>
+        ) : null}
+        {children}
+      </main>
     </div>
   )
 }

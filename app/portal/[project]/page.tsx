@@ -39,7 +39,15 @@ export default async function DashboardPage({
       where: { projectId: project.id, status: OpenItemStatus.OPEN },
       orderBy: { order: 'asc' },
     }),
-    prisma.selection.groupBy({ by: ['status'], _count: true }),
+    // Scoped through the room to this project. Without the where clause this
+    // counted every selection in the database, which read as "50 of 50" by
+    // luck while there was one project and would have been wrong the day
+    // there were two.
+    prisma.selection.groupBy({
+      by: ['status'],
+      where: { room: { projectId: project.id } },
+      _count: true,
+    }),
     budgetTotals(project.id),
     prisma.milestone.findFirst({
       where: { projectId: project.id, isDeadline: true },
@@ -113,7 +121,7 @@ export default async function DashboardPage({
         <Card className="p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-display text-lg text-ink">What we need from you</h2>
-            <Link href={`/portal/${project}/open-items`} className="text-sm text-driftwood hover:text-ink">
+            <Link href={`/portal/${project.slug}/open-items`} className="text-sm text-driftwood hover:text-ink">
               All of it
             </Link>
           </div>
@@ -133,7 +141,7 @@ export default async function DashboardPage({
         <Card className="p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-display text-lg text-ink">Money, at a glance</h2>
-            <Link href={`/portal/${project}/budget`} className="text-sm text-driftwood hover:text-ink">
+            <Link href={`/portal/${project.slug}/budget`} className="text-sm text-driftwood hover:text-ink">
               Full budget
             </Link>
           </div>
@@ -144,19 +152,26 @@ export default async function DashboardPage({
             </div>
             <div className="flex items-baseline justify-between gap-4">
               <dt className="text-sm text-driftwood-deep">Davina&rsquo;s expenses</dt>
-              <dd className="text-ink">{formatCents(totals.expense.plannedCents)}</dd>
+              <dd className="text-ink">
+                {totals.expense.plannedCents === 0
+                  ? 'None yet'
+                  : formatCents(totals.expense.plannedCents)}
+              </dd>
             </div>
           </dl>
           <p className="mt-3 text-xs leading-relaxed text-driftwood">
-            Two separate totals that never get added together. Nothing is a quote until it is priced against a
-            live product.
+            Two separate totals that never get added together.{' '}
+            {totals.expense.plannedCents === 0
+              ? 'Expenses go on the second line as they come up, which is why it is empty today.'
+              : null}{' '}
+            Nothing is a quote until it is priced against a live product.
           </p>
         </Card>
       </section>
 
       <OpenQuestion>
-        GL still has not assigned a street address or a lot number, which we need before anyone can schedule a
-        delivery or measure for blinds. The great room TV wall is also unresolved.
+        GL Homes still has not assigned a street address or a lot number, and we need one before anyone can
+        schedule a delivery or measure for blinds. The great room TV wall is also unresolved.
       </OpenQuestion>
     </div>
   )

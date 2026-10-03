@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
 import { projectsForUser } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
@@ -8,16 +7,18 @@ export const dynamic = 'force-dynamic'
 export const metadata = { robots: { index: false, follow: false } }
 
 /**
- * What you land on after signing in.
+ * What you land on after signing in: the projects this account is attached to.
  *
- * One project and you go straight into it, because a picker with a single
- * item on it is just a page in the way. Two or more and you choose.
+ * This used to pass straight through to the project when there was only one,
+ * on the reasoning that a list of one is a page in the way. That was wrong in
+ * practice. Signing in and arriving inside a project gives no sense of where
+ * you are or that there is anything above it, and the first thing both of us
+ * asked for was to see the list and click into it. So the list always shows,
+ * at one project and at ten.
  */
 export default async function PortalIndex() {
   const user = await requireUser()
   const projects = await projectsForUser(user)
-
-  if (projects.length === 1) redirect(`/portal/${projects[0].slug}`)
 
   if (projects.length === 0) {
     return (
@@ -35,8 +36,8 @@ export default async function PortalIndex() {
     <div className="mx-auto max-w-4xl space-y-8 px-4 py-12 sm:px-8">
       <PageHeader
         eyebrow={`Hi ${user.name.split(' ')[0]}`}
-        title="Your projects"
-        intro="Pick the one you want to work on."
+        title={projects.length === 1 ? 'Your project' : 'Your projects'}
+        intro="Click through to see where it stands, what has been picked and what is waiting on you."
       />
 
       <div className="grid gap-4 sm:grid-cols-2">

@@ -538,7 +538,7 @@ async function main() {
   }
 
   const wholeHouse: [string, string, number, string][] = [
-    ['Window treatments', 'Whole house', 5_000, 'Woven wood shades and ready made panels at this tier. Blinds only, no curtains. Check the GL contract first: if the package includes basic blinds this line drops by about half.'],
+    ['Window treatments', 'Whole house', 5_000, 'Woven wood shades and ready made panels at this tier. Blinds only, no curtains. Your GL Homes contract may already include basic blinds, and if it does this line drops by about half.'],
     ['Art, mirrors and decor', 'Whole house', 5_200, 'Includes reframing three or four existing pieces to black and natural wood.'],
     ['Freight, delivery, assembly, install', 'Logistics', 3_600, 'Runs 8 to 12 percent of goods.'],
     ['Sales tax at 7 percent', 'Tax', 2_800, '6 percent Florida plus 1 percent St. Lucie surtax. The county portion applies to the first $5,000 of any single item.'],
@@ -696,7 +696,7 @@ async function main() {
     ['Window sizes for the blind order', 'We cannot order blinds without these.', true],
     ['Which guest room mattress your kids bought', 'Roughly $300 to $400.', false],
     ['Electric blinds or the pull from the middle style', 'Once you see the price gap.', false],
-    ['Street address or lot number, once GL assigns it', 'Needed for delivery scheduling and the blind measure.', true],
+    ['Street address or lot number, once GL Homes assigns it', 'Needed for delivery scheduling and the blind measure.', true],
     ['Confirm the existing guest bed size', 'This decides queen or king for the 2nd bedroom mattress.', true],
     ['Confirm the island run length, 3 stools or 4', null, true],
     ['Actual framed dimensions of the remaining art', 'Every size we have is estimated from a photograph, and scale decides which wall a piece can hold.', false],
