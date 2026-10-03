@@ -14,6 +14,11 @@ export async function reset() {
   await prisma.selection.updateMany({ data: { chosenSlot: null, chosenAt: null } })
 
   await prisma.$transaction([
+    // Proposals hold a required createdByUserId, so they go before users.
+    prisma.proposalScopeItem.deleteMany(),
+    prisma.proposalPayment.deleteMany(),
+    prisma.proposalLine.deleteMany(),
+    prisma.proposal.deleteMany(),
     prisma.approvalLine.deleteMany(),
     prisma.approval.deleteMany(),
     prisma.purchaseOrder.deleteMany(),

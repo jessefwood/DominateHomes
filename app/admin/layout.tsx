@@ -9,6 +9,7 @@ import { requireDesigner } from '@/lib/session'
 
 const NAV = [
   { href: '/admin', label: 'Overview' },
+  { href: '/admin/proposals', label: 'Proposals' },
   { href: '/admin/integrations', label: 'Integrations' },
   { href: '/portal', label: 'Client portal' },
 ]

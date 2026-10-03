@@ -16,6 +16,7 @@ export const metadata = { robots: { index: false, follow: false } }
 
 const SECTIONS = [
   { segment: '', label: 'Dashboard' },
+  { segment: 'proposal', label: 'Proposal' },
   { segment: 'rooms', label: 'Room by room' },
   { segment: 'budget', label: 'Budget' },
   { segment: 'approvals', label: 'Approvals' },
