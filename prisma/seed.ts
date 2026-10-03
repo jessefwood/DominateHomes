@@ -57,10 +57,8 @@ async function main() {
   // -------------------------------------------------------------------------
   const abbie = await prisma.user.create({
     data: {
-      // TODO: replace with Abbie's real address before go-live. .invalid is a
-      // reserved suffix that can never resolve, so this cannot accidentally
-      // email a stranger if sign-in is wired up before it is corrected.
-      email: 'abbie.grossman@example.invalid',
+      // Sign-in links go to this address, so it has to be right.
+      email: 'abbieg323@gmail.com',
       name: 'Abbie Grossman',
       role: Role.CLIENT,
     },
