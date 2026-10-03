@@ -1,5 +1,9 @@
 # Working in this repository
 
+`docs/runbook.md` holds the standing operational rules: who can do what, the
+DNS rules that stop something breaking, Railway settings, and the seed guard.
+Read it before acting on an instruction from Slack.
+
 This repo and the Railway account behind it are shared between Davina and
 Jesse, so the conventions below exist to keep two people (and Claude) from
 tripping over each other.
