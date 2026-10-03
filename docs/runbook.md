@@ -32,10 +32,31 @@ correct and expected, because it was never delegated there.
 
 **Never change nameservers.**
 
-**Never touch the MX records.** They are the business email and they are also
-the portal's sending identity: every sign-in link goes out as
-`info@dominatehomes.com`. Breaking them stops client logins and company email
-in one move.
+**Never touch the MX records.** They are five Google rows: the company email
+is Gmail, on `info@dominatehomes.com`. That address is also the portal's
+sending identity, so every client sign-in link goes out as it. Breaking those
+rows stops company email and client logins in one move.
+
+**A root CNAME is not safe on this domain.** A CNAME at the root cannot
+coexist with other records for the same name, and this root carries the five
+MX rows plus two TXT rows. Railway asks for exactly that when you add the
+apex. Use an ALIAS or ANAME if the provider has one, or domain forwarding, but
+never a plain CNAME at the root here.
+
+**The SPF record is malformed and should be fixed.** It currently reads:
+
+    v=spf1 include:dc-aa8e722993._spfm.dominatehomes.com ~all include:amazonses.com ~all
+
+SPF is evaluated left to right and `all` always matches, so evaluation stops
+at the first `~all`. Everything after it, including `include:amazonses.com`,
+is dead. A record may have only one `all`, at the end. The corrected form is:
+
+    v=spf1 include:dc-aa8e722993._spfm.dominatehomes.com include:amazonses.com ~all
+
+This has not broken sign-in links so far because Resend signs with DKIM and
+DMARC is `p=none`, so nothing is being rejected. It is still a real
+deliverability risk: the thing at stake is a client being unable to log in
+because the link went to spam.
 
 Screenshot the zone before editing it.
 
