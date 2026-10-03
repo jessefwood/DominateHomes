@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { pendingAccessRequestCount } from '@/lib/access-requests'
 import { AccountMenu } from '@/components/account-menu'
 import { BackLink } from '@/components/back-link'
 import { Logomark } from '@/components/logo'
@@ -14,6 +15,7 @@ import { requireDesigner } from '@/lib/session'
 const NAV: AdminLink[] = [
   { href: '/admin', label: 'Overview', exact: true },
   { href: '/admin/projects', label: 'Projects' },
+  { href: '/admin/people', label: 'People' },
   { href: '/admin/proposals', label: 'Proposals' },
   { href: '/admin/integrations', label: 'Integrations' },
 ]
@@ -23,6 +25,10 @@ export const metadata = { robots: { index: false, follow: false } }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requireDesigner()
+
+  // On every admin page rather than only on People, because the cost of
+  // missing one of these is losing a job to whoever replied first.
+  const waiting = await pendingAccessRequestCount()
 
   return (
     <div className="min-h-screen">
@@ -49,7 +55,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">
+        {waiting > 0 ? (
+          <Link
+            href="/admin/people"
+            className="mb-6 block rounded-lg bg-clay-wash px-4 py-3 text-sm text-clay-deep transition-opacity hover:opacity-80"
+          >
+            {waiting === 1
+              ? 'Somebody has asked for access and is waiting on you.'
+              : `${waiting} people have asked for access and are waiting on you.`}{' '}
+            <span className="underline underline-offset-2">Have a look</span>
+          </Link>
+        ) : null}
+        {children}
+      </main>
     </div>
   )
 }

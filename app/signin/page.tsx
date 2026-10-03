@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Logomark } from '@/components/logo'
 import { currentUser } from '@/lib/session'
@@ -13,6 +14,13 @@ const PROBLEM: Record<string, string> = {
   address: 'That does not look like an email address. Have another go.',
   toomany: 'That is a lot of links in a short time. Wait a few minutes and try again.',
   failed: 'Something went wrong sending that. Try again in a moment, and text Davina if it keeps happening.',
+  // The four an invitation link can end in. "spent" is the common one and the
+  // only one that is good news, so it does not read like a failure.
+  'invite-spent':
+    'Your account is already set up, so that invitation has done its job. Put your email in below and we will send you a link.',
+  'invite-expired': 'That invitation had run out. Ask Davina for a new one and it will be straight through.',
+  'invite-revoked': 'That invitation is no longer live. Text Davina and she will sort it out.',
+  'invite-unknown': 'That invitation link did not work. Text Davina and she will send another.',
 }
 
 /** Private. A client's budget has no business in a search index. */
@@ -63,6 +71,14 @@ export default async function SignInPage({
 
       <p className="mt-5 text-center text-xs leading-relaxed text-driftwood">
         Trouble getting in? Text Davina and she will sort it out.
+      </p>
+
+      <p className="mt-2 text-center text-xs leading-relaxed text-driftwood">
+        Not a client yet?{' '}
+        <Link href="/request-access" className="text-driftwood-deep underline underline-offset-2">
+          Ask for access
+        </Link>
+        .
       </p>
     </div>
   )

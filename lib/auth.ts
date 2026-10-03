@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import type { User } from '@prisma/client'
+import { ensureConfiguredAdmin } from './admins'
 import { prisma } from './db'
 import { mailer, signInEmail } from './mailer'
 
@@ -92,7 +93,17 @@ export async function requestSignInLink(
   baseUrl: string,
 ): Promise<SignInLinkResult> {
   const email = normaliseEmail(rawEmail)
-  const user = await prisma.user.findUnique({ where: { email } })
+
+  // The way back in. An address on ADMIN_EMAILS in the hosting settings gets
+  // a designer account that can sign in, whether or not one exists. This is
+  // the only thing in here that creates a user, and the only people who can
+  // put an address on that list are the two who own the Railway project.
+  //
+  // It is here rather than in admin because the case it exists for is both
+  // designer accounts being closed or lost, when there is no admin screen to
+  // reach. See lib/admins.ts.
+  const admin = await ensureConfiguredAdmin(email)
+  const user = admin ?? (await prisma.user.findUnique({ where: { email } }))
 
   if (!user) return { sent: false }
 
