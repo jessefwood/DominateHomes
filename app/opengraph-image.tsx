@@ -6,7 +6,7 @@ import { ImageResponse } from 'next/og'
  * the palette and never goes missing from the repo.
  */
 
-export const alt = 'Dominate Homes, furnishing new builds on the Treasure Coast'
+export const alt = 'Dominate Homes, furnishing new builds, Chesapeake Virginia'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -44,7 +44,7 @@ export default async function Image() {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 28, color: '#5c574d', fontFamily: 'sans-serif', maxWidth: 760 }}>
-            Furnishing and styling new builds on the Treasure Coast
+            Furnishing and styling new builds, room by room
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <div style={{ width: 56, height: 56, borderRadius: 28, background: '#95978a' }} />

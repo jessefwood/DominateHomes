@@ -46,7 +46,7 @@ function siteUrl(): URL {
  */
 export async function generateMetadata(): Promise<Metadata> {
   const description =
-    'Furnishing and styling new builds on the Treasure Coast. Every room costed, every piece measured, and every decision narrowed to three options.'
+    'Furnishing and styling new builds, room by room. Every room costed, every piece measured, and every decision narrowed to three options. Based in Chesapeake, Virginia.'
 
   const base: Metadata = {
     metadataBase: siteUrl(),
