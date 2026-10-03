@@ -44,8 +44,19 @@ costs nothing.
 Written the way Davina talks. No em dashes. Few inline links, especially near
 the top. Speaking directly to Abbie, not at her.
 
-The house has no street address assigned. It is *Plan 643 Bianca PSL*
-everywhere, client-facing included, until GL assigns a lot number.
+## Naming a project
+
+Projects are named and addressed by **street number and street name**, not by
+the client's surname. That is the convention for the portal, for artifact URLs
+and for anything the client sees.
+
+Until an address exists, fall back to the builder's plan name. The Grossman
+house has no street address assigned yet, so it is *Plan 643 Bianca PSL*
+everywhere, client-facing included, until GL assigns a lot number. The moment
+GL does, set `Project.addressLine` and `Project.displayName` and update
+`Project.slug`, and close the matching open item.
+
+Do not invent or guess an address to satisfy the convention.
 
 ## Numbers
 
