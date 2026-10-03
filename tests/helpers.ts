@@ -23,6 +23,7 @@ export async function reset() {
     prisma.message.deleteMany(),
     prisma.invite.deleteMany(),
     prisma.accessRequest.deleteMany(),
+    prisma.siteSetting.deleteMany(),
     // Proposals hold a required createdByUserId, so they go before users.
     prisma.proposalScopeItem.deleteMany(),
     prisma.proposalPayment.deleteMany(),

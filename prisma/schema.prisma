@@ -173,6 +173,21 @@ model Project {
   /// Davina's own notes on the project. Never shown to the client.
   designerNote String?
 
+  /// Whether this project appears in the work gallery on the public site.
+  ///
+  /// Off by default, and that default is the point. A client's house, budget
+  /// and decisions are private unless somebody deliberately decides otherwise,
+  /// so publishing is an action rather than something that happens because a
+  /// project exists. Only the photograph, the name, the community and
+  /// `siteSummary` are ever published, never anything from the rooms or the
+  /// budget.
+  showOnSite Boolean @default(false)
+
+  /// A line or two about the project, written for a stranger rather than for
+  /// the client. The portal copy talks to the client in the second person and
+  /// reads oddly on a public page, so this is written separately.
+  siteSummary String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1180,4 +1195,21 @@ model AuditEvent {
   @@index([createdAt])
   @@index([action, createdAt])
   @@index([projectId, createdAt])
+}
+
+/// Small pieces of the public site that Davina should be able to change
+/// without a deploy: the photograph at the top, the two team photographs, the
+/// line under the headline.
+///
+/// A key and a value rather than a column per setting, because the alternative
+/// is a migration every time the marketing page wants one more picture. The
+/// known keys and their defaults live in lib/site.ts, so nothing reads a raw
+/// string out of here and hopes.
+///
+/// Public by definition. Nothing private goes in this table.
+model SiteSetting {
+  key   String @id
+  value String
+
+  updatedAt DateTime @updatedAt
 }

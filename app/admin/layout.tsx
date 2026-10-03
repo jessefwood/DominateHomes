@@ -16,6 +16,7 @@ const NAV: AdminLink[] = [
   { href: '/admin', label: 'Overview', exact: true },
   { href: '/admin/projects', label: 'Projects' },
   { href: '/admin/people', label: 'People' },
+  { href: '/admin/website', label: 'Website' },
   { href: '/admin/proposals', label: 'Proposals' },
   { href: '/admin/integrations', label: 'Integrations' },
   { href: '/admin/activity', label: 'Activity' },

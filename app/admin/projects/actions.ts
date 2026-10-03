@@ -57,6 +57,11 @@ async function guarded(work: () => Promise<Result>): Promise<Result> {
 
 /** Everything under this project, since a rename changes the client's pages too. */
 function revalidateProject(slug: string) {
+  // The public home page draws the work gallery from these rows, so turning a
+  // project on or changing its photograph has to clear that too. Without this
+  // Davina ticks the box, opens the site, sees nothing, and unticks it again.
+  revalidatePath('/')
+  revalidatePath('/admin/website')
   revalidatePath('/admin/projects')
   revalidatePath(`/admin/projects/${slug}`, 'layout')
   revalidatePath(`/portal/${slug}`, 'layout')
@@ -80,6 +85,8 @@ export async function saveProject(projectId: string, values: Values): Promise<Re
         heroImageUrl: optionalUrl(values.heroImageUrl, 'The photo link'),
         heroCaption: optionalText(values.heroCaption),
         designerNote: optionalText(values.designerNote),
+        showOnSite: checkbox(values.showOnSite),
+        siteSummary: optionalText(values.siteSummary),
       },
     })
 

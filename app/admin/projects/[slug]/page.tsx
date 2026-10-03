@@ -99,6 +99,22 @@ export default async function EditProject({ params }: { params: Promise<{ slug: 
                 hint: 'Only you and Jesse see this. It is never shown to the client.',
                 wide: true,
               },
+              {
+                name: 'showOnSite',
+                kind: 'checkbox',
+                label: 'Show this project on the public website',
+                value: project.showOnSite ? 'on' : '',
+                hint: 'Off unless you turn it on. It publishes four things and no more: the photograph above, the name, the community and the summary below. Never a room, a price, or the client’s name. Ask the client first.',
+                wide: true,
+              },
+              {
+                name: 'siteSummary',
+                kind: 'textarea',
+                label: 'Summary for the website',
+                value: project.siteSummary ?? '',
+                hint: 'A line or two for a stranger rather than for the client. Shown under the photograph in the work gallery.',
+                wide: true,
+              },
             ]}
           />
         </div>
