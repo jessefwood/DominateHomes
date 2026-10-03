@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
+import { Card, EmptyState, PageHeader, Photo, PhotoMissing, Pill } from '@/components/ui'
 import { projectsForUser } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
 
@@ -36,13 +36,34 @@ export default async function PortalIndex() {
     <div className="mx-auto max-w-4xl space-y-8 px-4 py-12 sm:px-8">
       <PageHeader
         eyebrow={`Hi ${user.name.split(' ')[0]}`}
-        title={projects.length === 1 ? 'Your project' : 'Your projects'}
-        intro="Click through to see where it stands, what has been picked and what is waiting on you."
+        title={
+          user.role === 'DESIGNER'
+            ? 'Every project'
+            : projects.length === 1
+              ? 'Your project'
+              : 'Your projects'
+        }
+        intro={
+          user.role === 'DESIGNER'
+            ? 'Every project on the books, as the client sees it. Open one to read it their way, or edit it in admin.'
+            : 'Click through to see where it stands, what has been picked and what is waiting on you.'
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
         {projects.map((project) => (
-          <Card key={project.id} href={`/portal/${project.slug}`} className="p-5">
+          <Card key={project.id} href={`/portal/${project.slug}`}>
+            {project.heroImageUrl ? (
+              <Photo
+                src={project.heroImageUrl}
+                alt={project.displayName}
+                aspect="aspect-[16/9]"
+                className="rounded-none"
+              />
+            ) : (
+              <PhotoMissing aspect="aspect-[16/9]" className="rounded-none border-0 border-b" />
+            )}
+            <div className="p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="font-display text-lg leading-tight text-ink">{project.displayName}</h2>
@@ -53,6 +74,7 @@ export default async function PortalIndex() {
             <p className="mt-3 text-sm text-driftwood-deep">
               {project.acSqFt.toLocaleString()} square feet under air
             </p>
+            </div>
           </Card>
         ))}
       </div>

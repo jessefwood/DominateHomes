@@ -150,6 +150,19 @@ model Project {
   earliestCloseOn DateTime?
   installAfterOn  DateTime?
 
+  /// One photograph for the top of the project, and a line under it.
+  ///
+  /// A URL rather than an upload because there is nowhere to upload to yet:
+  /// no object storage is connected, and writing to local disk on Railway
+  /// would lose every picture on the next deploy. Davina pastes a link from
+  /// the vendor, the builder or her own Drive. When storage exists this
+  /// becomes the key into it and the screens do not change.
+  heroImageUrl String?
+  heroCaption  String?
+
+  /// Davina's own notes on the project. Never shown to the client.
+  designerNote String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -205,6 +218,11 @@ model Room {
   constraintNote String?
   /// Set where the layout itself is unresolved, e.g. the great room TV wall.
   unresolvedNote String?
+
+  /// A photograph of the room, or of the direction for it. Same reasoning as
+  /// Project.heroImageUrl: a pasted URL until there is storage to upload to.
+  photoUrl     String?
+  photoCaption String?
 
   approvalStatus ApprovalStatus @default(NOT_READY)
 
@@ -508,6 +526,12 @@ model ArtPiece {
 
   /// Heavy pieces under glass need studs or a cleat.
   needsStudsOrCleat Boolean @default(false)
+
+  /// A photograph of the piece. Art is the one part of the project that
+  /// cannot be described in words at all, so a list of titles with no
+  /// pictures is close to useless to the person deciding.
+  photoUrl     String?
+  photoCaption String?
 
   destinationRoomId String?
   destinationRoom   Room?   @relation(fields: [destinationRoomId], references: [id], onDelete: SetNull)
@@ -815,8 +839,6 @@ model ProposalLine {
   amountCents Int
   order       Int
 
-  stage PaymentStage
-
   @@index([proposalId])
 }
 
@@ -833,6 +855,8 @@ model ProposalPayment {
 
   amountCents Int
   order       Int
+
+  stage PaymentStage
 
   /// Set when this instalment is settled. The reference is whatever the
   /// payment processor called it, kept for reconciliation only.

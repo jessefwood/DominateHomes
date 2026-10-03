@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { OpenItemOwner, OpenItemStatus, SelectionStatus } from '@prisma/client'
-import { Card, OpenQuestion, PageHeader, Pill } from '@/components/ui'
+import { Card, OpenQuestion, PageHeader, Photo, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
 import { formatCents } from '@/lib/money'
 import { requireProjectAccess } from '@/lib/projects'
@@ -71,6 +71,19 @@ export default async function DashboardPage({
         title="Where the project stands"
         intro={`${project.displayName}. ${project.acSqFt.toLocaleString()} square feet under air, 13 rooms we are touching. The direction is approved and the scope is settled, so the work now is picking pieces room by room.`}
       />
+
+      {project.heroImageUrl ? (
+        <figure>
+          <Photo
+            src={project.heroImageUrl}
+            alt={project.displayName}
+            aspect="aspect-[21/9]"
+          />
+          {project.heroCaption ? (
+            <figcaption className="mt-2 text-sm text-driftwood">{project.heroCaption}</figcaption>
+          ) : null}
+        </figure>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-5">

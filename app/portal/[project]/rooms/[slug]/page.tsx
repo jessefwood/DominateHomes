@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ApprovalStatus, SelectionStatus } from '@prisma/client'
-import { Card, EmptyState, OpenQuestion, PageHeader, Pill } from '@/components/ui'
+import { BackLink } from '@/components/back-link'
+import { Card, EmptyState, OpenQuestion, PageHeader, Photo, PhotoMissing, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
 import { formatBand, formatCents } from '@/lib/money'
 import { SELECTION_STATUS_LABEL } from '@/lib/selections'
@@ -64,13 +64,23 @@ export default async function RoomPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <Link href={`/portal/${project}/rooms`} className="text-sm text-driftwood hover:text-ink">
-          Back to all rooms
-        </Link>
-      </div>
+      {/*
+        This said `/portal/${project}/rooms`, interpolating the whole project
+        record rather than its slug, so every room linked back to
+        /portal/[object Object]/rooms and 404d. It is `project.slug`.
+      */}
+      <BackLink fallbackHref={`/portal/${project.slug}/rooms`} label="Back to all rooms" />
 
       <PageHeader eyebrow={size ?? 'Room'} title={room.name} intro={room.contents} />
+
+      {room.photoUrl ? (
+        <figure>
+          <Photo src={room.photoUrl} alt={room.name} aspect="aspect-[21/9]" />
+          {room.photoCaption ? (
+            <figcaption className="mt-2 text-sm text-driftwood">{room.photoCaption}</figcaption>
+          ) : null}
+        </figure>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <Pill>{room.rugSize ? `Rug ${room.rugSize}` : 'No rug'}</Pill>
@@ -148,6 +158,8 @@ export default async function RoomPage({
                     leadTimeDays: option.leadTimeDays,
                     dimensions: option.dimensions,
                     nonReturnable: option.nonReturnable,
+                    photoUrl: option.photoUrl,
+                    productUrl: option.productUrl,
                   }))}
                   chosenSlot={selection.chosenSlot}
                   locked={selection.status !== SelectionStatus.PENDING && selection.status !== SelectionStatus.CHOSEN}
@@ -167,6 +179,32 @@ export default async function RoomPage({
           totalCents={roomTotalCents}
           nonReturnableItems={nonReturnableItems}
         />
+      ) : null}
+
+      {room.artPieces.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="font-display text-xl text-ink">Art for this room</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {room.artPieces.map((piece) => (
+              <Card key={piece.id}>
+                {piece.photoUrl ? (
+                  <Photo src={piece.photoUrl} alt={piece.title} className="rounded-none" />
+                ) : (
+                  <PhotoMissing className="rounded-none border-0 border-b" />
+                )}
+                <div className="p-4">
+                  <p className="leading-snug font-medium text-ink">{piece.title}</p>
+                  {piece.sizeLabel ? (
+                    <p className="mt-0.5 text-sm text-driftwood">{piece.sizeLabel}</p>
+                  ) : null}
+                  {piece.artist ? (
+                    <p className="mt-0.5 text-sm text-driftwood">{piece.artist}</p>
+                  ) : null}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       {room.reusePieces.length > 0 ? (

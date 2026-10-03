@@ -28,9 +28,14 @@ export default async function AdminOverview() {
       />
 
       <section className="space-y-3">
-        <h2 className="font-display text-xl text-ink">Projects</h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-display text-xl text-ink">Projects</h2>
+          <Link href="/admin/projects" className="text-sm text-driftwood hover:text-ink">
+            Edit them
+          </Link>
+        </div>
         {projects.map((project) => (
-          <Card key={project.id} className="p-5">
+          <Card key={project.id} href={`/admin/projects/${project.slug}`} className="p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <div>
                 <p className="font-display text-lg text-ink">{project.displayName}</p>

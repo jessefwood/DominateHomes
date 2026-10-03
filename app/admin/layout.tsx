@@ -1,5 +1,8 @@
 import Link from 'next/link'
+import { AccountMenu } from '@/components/account-menu'
+import { BackLink } from '@/components/back-link'
 import { Logomark } from '@/components/logo'
+import { AdminNav, type AdminLink } from '@/components/admin-nav'
 import { requireDesigner } from '@/lib/session'
 
 /**
@@ -8,11 +11,11 @@ import { requireDesigner } from '@/lib/session'
  * knowing this area exists.
  */
 
-const NAV = [
-  { href: '/admin', label: 'Overview' },
+const NAV: AdminLink[] = [
+  { href: '/admin', label: 'Overview', exact: true },
+  { href: '/admin/projects', label: 'Projects' },
   { href: '/admin/proposals', label: 'Proposals' },
   { href: '/admin/integrations', label: 'Integrations' },
-  { href: '/portal', label: 'Client portal' },
 ]
 
 /** Private. A client's budget has no business in a search index. */
@@ -23,36 +26,30 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen">
-      <header className="hairline border-b bg-white/60">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-8">
-          <div className="flex items-start gap-2.5">
-            <Logomark className="mt-1 w-7 shrink-0 text-ink" title="Dominate Homes" />
-            <div>
-            <Link href="/admin" className="font-display text-lg leading-none text-ink">
-              Dominate Homes admin
-            </Link>
-            <p className="mt-1 text-[11px] tracking-[0.18em] text-driftwood uppercase">
-              {user.name}
-            </p>
-            </div>
+      <header className="hairline sticky top-0 z-40 border-b bg-page/85 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-8">
+          <Link href="/admin" className="flex shrink-0 items-center gap-2.5">
+            <Logomark className="w-7 shrink-0 text-ink" title="Dominate Homes" />
+            <span className="hidden text-[11px] leading-tight tracking-[0.18em] text-driftwood uppercase sm:block">
+              Dominate Homes
+              <br />
+              Admin
+            </span>
+          </Link>
+
+          <span className="hairline hidden h-7 w-px shrink-0 border-l sm:block" aria-hidden />
+
+          <div className="min-w-0 flex-1 overflow-x-auto">
+            <AdminNav links={NAV} />
           </div>
 
-          <nav className="flex flex-wrap items-center gap-4">
-            {NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="text-sm text-driftwood-deep hover:text-ink">
-                {item.label}
-              </Link>
-            ))}
-            <form action="/api/auth/signout" method="post">
-              <button type="submit" className="text-sm text-driftwood hover:text-ink">
-                Sign out
-              </button>
-            </form>
-          </nav>
+          <BackLink fallbackHref="/admin" className="hidden sm:inline-flex" />
+
+          <AccountMenu name={user.name} email={user.email} isDesigner />
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">{children}</main>
     </div>
   )
 }
