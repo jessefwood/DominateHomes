@@ -71,6 +71,16 @@ model User {
   integrations  Integration[]
   memberships   ProjectMember[]
 
+  /// Files this person sent, and files they put in the trash. Two relations to
+  /// the same table, so both need naming.
+  uploads        Upload[] @relation("UploadedBy")
+  deletedUploads Upload[] @relation("UploadDeletedBy")
+
+  messages       Message[]
+  invitesSent    Invite[]        @relation("InviteCreatedBy")
+  accessReviewed AccessRequest[] @relation("AccessRequestReviewedBy")
+  auditEvents    AuditEvent[]
+
   proposalsWritten  Proposal[] @relation("ProposalCreatedBy")
   proposalsAccepted Proposal[] @relation("ProposalAcceptedBy")
 
@@ -174,6 +184,10 @@ model Project {
   openItems   OpenItem[]
   milestones  Milestone[]
   proposals   Proposal[]
+  uploads     Upload[]
+  messages    Message[]
+  invites     Invite[]
+  auditEvents AuditEvent[]
 }
 
 enum RoomTier {
@@ -231,6 +245,7 @@ model Room {
   budgetLines BudgetLine[]
   reusePieces ReusePiece[]
   artPieces   ArtPiece[]
+  uploads     Upload[]
 
   @@unique([projectId, slug])
   @@index([projectId, order])
@@ -904,4 +919,265 @@ model ProposalScopeItem {
   order Int
 
   @@index([proposalId])
+}
+
+// ---------------------------------------------------------------------------
+// Files
+//
+// Three rules here, same standing as the three at the top of this file.
+//
+// A. NOTHING IN THE BUCKET IS PUBLIC. `storageKey` is a path inside a private
+//    bucket, never a URL. Reads happen through a route that proves the person
+//    may see the file and then redirects to a link that expires in minutes.
+//    There is no column here for a public address, deliberately.
+//
+// B. A FILE IS NOT REAL UNTIL `confirmedAt` IS SET. The browser uploads
+//    straight to the bucket, so the server never sees the bytes and cannot
+//    take the browser's word for the size or the type. The row is written
+//    first, the upload happens, then the server asks the bucket what actually
+//    arrived. A row with no `confirmedAt` is an upload that failed and is not
+//    shown to anybody.
+//
+// C. DELETING SETS `deletedAt`. It does not remove the row and it does not
+//    remove the object. Admins can put a file back for 30 days, and nothing
+//    in the application ever hard deletes a client's file.
+// ---------------------------------------------------------------------------
+
+/// Who sent it. Worth storing rather than deriving from the uploader's role,
+/// because a designer's role could change later and this is a record of what
+/// happened at the time.
+enum UploadSource {
+  CLIENT
+  DESIGNER
+}
+
+/// What it is, for grouping on screen. Derived from the content type when the
+/// row is written, so the screens never parse MIME strings.
+enum UploadKind {
+  PHOTO
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+model Upload {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  uploadedById String
+  uploadedBy   User   @relation("UploadedBy", fields: [uploadedById], references: [id])
+
+  /// Which room it is about, when they said. Optional because most of what a
+  /// client sends early on is the whole house, not one room.
+  roomId String?
+  room   Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  /// The path inside the private bucket. Unique, because the upload's own id
+  /// is part of it, which is also what stops two people sending IMG_4821.jpg
+  /// on the same afternoon from overwriting each other.
+  storageKey String @unique
+
+  /// The name as it was on their phone, cleaned. Shown on screen and used for
+  /// the download filename.
+  filename String
+
+  /// Both read back off the bucket after the upload, not taken from the
+  /// browser. See rule B above.
+  contentType String
+  sizeBytes   Int
+
+  kind   UploadKind
+  source UploadSource
+
+  /// What they said about it. This is the measurement, the "this is the wall
+  /// I meant", the thing that makes a photo of a bare room useful.
+  caption String?
+
+  confirmedAt DateTime?
+
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("UploadDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  /// The list a project screen draws, newest first, is this index.
+  @@index([projectId, deletedAt, createdAt])
+  @@index([roomId])
+  @@index([uploadedById])
+}
+
+// ---------------------------------------------------------------------------
+// Letting people in
+//
+// There is still no self-signup. These two tables are the only ways an
+// account comes into being, and both end with a designer deciding:
+//
+//   Invite        a designer names someone and sends them a link.
+//   AccessRequest a stranger asks, and a designer approves or declines.
+//
+// An approved request becomes an invite. Nothing creates a user row on its
+// own, and nothing here can grant the designer role.
+// ---------------------------------------------------------------------------
+
+/// An invitation to one project, sent by a designer.
+///
+/// Same shape as LoginToken on purpose: the emailed secret is never stored,
+/// only its SHA-256 hash, so a leak of this table cannot be used to get in.
+model Invite {
+  id String @id @default(cuid())
+
+  email String
+  name  String
+
+  /// The project they are being added to, and how they want to be described
+  /// on it, e.g. "Abbie and Russell". Null project means an invitation to the
+  /// portal with no project attached yet, which is rare but legitimate when
+  /// the project has not been set up.
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  label     String?
+
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  /// Accepting creates the user row and the membership, then stamps this.
+  acceptedAt DateTime?
+  /// A designer can withdraw an invitation that has not been accepted.
+  revokedAt  DateTime?
+
+  createdById String
+  createdBy   User   @relation("InviteCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([projectId])
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+/// Somebody asking to be let in, from the public form.
+///
+/// Holds no credential and grants nothing. It is a message with a status on
+/// it. Approving one sends an invite; the invite is what actually lets them
+/// in, which keeps the decision and the credential in separate places.
+model AccessRequest {
+  id String @id @default(cuid())
+
+  email String
+  name  String
+  phone String?
+  /// What they typed about their project. Rendered as text, never as markup.
+  note  String?
+
+  status AccessRequestStatus @default(PENDING)
+
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?     @relation("AccessRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  /// Why it was declined, for our own records. Never sent to them.
+  reviewNote   String?
+
+  createdAt DateTime @default(now())
+
+  /// The pending count in the admin banner, and the list under it.
+  @@index([status, createdAt])
+  @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// Messages
+// ---------------------------------------------------------------------------
+
+/// One message in a project's thread.
+///
+/// Scoped to a project rather than to a pair of people, because the thread is
+/// about the house. Both designers see and answer the same thread, which is
+/// the point: a client should not have to remember which of us she told.
+model Message {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  /// Plain text. Rendered as text, with line breaks preserved and nothing
+  /// else interpreted.
+  body String
+
+  /// When each side last saw it. Two timestamps rather than a boolean,
+  /// because "when" is the useful thing and because the two sides read
+  /// independently.
+  readByClientAt   DateTime?
+  readByDesignerAt DateTime?
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, deletedAt, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// The record of what happened
+// ---------------------------------------------------------------------------
+
+/// Things worth being able to answer "when did that happen" about.
+///
+/// Deliberately not every write. A log that records everything is a log
+/// nobody reads. This covers getting in, being let in, and anything that
+/// moves or removes a client's file.
+enum AuditAction {
+  SIGN_IN_REQUESTED
+  SIGNED_IN
+  SIGNED_OUT
+  ACCESS_OPENED
+  ACCESS_CLOSED
+  INVITE_SENT
+  INVITE_ACCEPTED
+  INVITE_REVOKED
+  ACCESS_REQUESTED
+  ACCESS_APPROVED
+  ACCESS_DECLINED
+  FILE_UPLOADED
+  FILE_DELETED
+  FILE_RESTORED
+  MESSAGE_SENT
+}
+
+model AuditEvent {
+  id     String      @id @default(cuid())
+  action AuditAction
+
+  /// Who did it. Null when a signed-out visitor did, which is the case for a
+  /// request for access and for a sign-in link.
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  /// The address involved when there is no account to point at. Also kept for
+  /// account events, so the row still reads correctly after a rename.
+  actorEmail String?
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  /// One line, already written for a person to read. The screen shows this
+  /// rather than reassembling a sentence from the columns.
+  summary String
+
+  /// Which record, so a row can be traced back without a join per action.
+  subjectType String?
+  subjectId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([projectId, createdAt])
 }

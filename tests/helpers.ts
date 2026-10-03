@@ -14,6 +14,15 @@ export async function reset() {
   await prisma.selection.updateMany({ data: { chosenSlot: null, chosenAt: null } })
 
   await prisma.$transaction([
+    // Uploads, messages and invites all hold a required user id with RESTRICT
+    // on it, so they go before users for the same reason proposals do. Audit
+    // events do not have to, but a log left behind from the previous test is
+    // noise in the next one.
+    prisma.auditEvent.deleteMany(),
+    prisma.upload.deleteMany(),
+    prisma.message.deleteMany(),
+    prisma.invite.deleteMany(),
+    prisma.accessRequest.deleteMany(),
     // Proposals hold a required createdByUserId, so they go before users.
     prisma.proposalScopeItem.deleteMany(),
     prisma.proposalPayment.deleteMany(),

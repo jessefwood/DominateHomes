@@ -33,6 +33,7 @@ const SECTIONS: PortalSection[] = [
   { segment: 'pieces', label: 'Your pieces' },
   { segment: 'art', label: 'Art' },
   { segment: 'open-items', label: 'Open items' },
+  { segment: 'files', label: 'Files' },
   { segment: 'timeline', label: 'Timeline' },
   { segment: 'orders', label: 'Order tracker' },
 ]
