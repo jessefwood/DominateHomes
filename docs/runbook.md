@@ -56,8 +56,19 @@ authoritative while doing nothing. Settings are applied by hand:
 | Healthcheck Path | `/healthz` |
 
 `npm start` runs `prisma migrate deploy` before the server, so migrations
-apply on every release. A deploy log without that line means the fix has been
-undone.
+apply on every release. A deploy log without that line means either the Start
+Command was lost, or the deployed commit predates the fix. Check the second
+one first.
+
+**A green deploy proves the build succeeded, not that the intended commit
+shipped.** Always check the deployed commit SHA, not the status colour. This
+hid a problem for forty minutes: Railway was deploying `main`, every deploy
+went green, and `main` had forked before four commits of work. Everything
+looked healthy and almost nothing being tested was actually live.
+
+Railway deploys **`main`**. Work lands on a branch and reaches `main` through
+a pull request. A fix pushed to a feature branch is not deployed, however
+green the last deploy looks.
 
 Required variables: `DATABASE_URL`, `APP_URL`, `MAIL_FROM`, `RESEND_API_KEY`,
 `CREDENTIAL_KEY`. Never set `PORT`.
