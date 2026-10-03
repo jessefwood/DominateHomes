@@ -4,8 +4,15 @@ Target is the Railway project **dominate-homes**, environment **production**
 (project ID `93801dc1-516b-40fc-b39b-5fdabdadc50d`), with the app served at
 `portal.dominatehomes.com`.
 
-`railway.json` in the repo root already sets the build command, the start
-command and the health check, so Railway picks those up on its own.
+**There is no `railway.json`.** Railway deprecated config-as-code and services
+created after 2026-08-28 cannot opt in, so a file in the repo would look
+authoritative while doing nothing. The settings below are set by hand in the
+Railway dashboard instead.
+
+`npm start` runs `prisma migrate deploy` before `next start`, so pending
+migrations apply on every release whatever command the platform chooses to
+invoke. `prisma` is a runtime dependency rather than a dev one, so it survives
+a production install.
 
 ## 1. Postgres
 
@@ -55,24 +62,50 @@ an upgrade.
 The DNS records Resend gives you go to Jesse along with the CNAME below. Until
 the domain verifies, sign-in emails will not send and nobody can get in.
 
-## 4. Migrations
+## 4. Settings to set by hand in Railway
 
-Nothing to do. `npm run start:prod` runs `prisma migrate deploy` before
-starting, so each release applies pending migrations.
+On the app service, Settings:
+
+| Setting | Value |
+|---|---|
+| Build Command | leave empty, Railpack detects Next.js |
+| Start Command | `npm start` |
+| Healthcheck Path | `/healthz` |
+
+**The healthcheck matters.** Without it a deploy that boots but cannot reach
+the database goes live anyway. With it, Railway holds the release back and
+keeps the previous version serving.
+
+## 5. Migrations
+
+Nothing to do. `npm start` runs `prisma migrate deploy` first, so each release
+applies pending migrations.
 
 The seed does **not** run automatically, which is deliberate. It wipes and
 rebuilds every table. To load the initial data once, open a Railway shell on
 the app service and run `npm run db:seed`. Never run it again after real
 client decisions exist in the database.
 
-## 5. The domain
+## 6. The domain
 
 On the app service: Settings, Networking, **Custom Domain**, enter
 `portal.dominatehomes.com`.
 
-Railway returns a CNAME target that looks like
-`<something>.up.railway.app`. That exact value is what Jesse needs for the DNS
-record:
+Railway returns **two** records, not one: a CNAME target and a
+`_railway-verify.<subdomain>` TXT record. Both are required; the certificate
+will not issue with only the CNAME.
+
+For the portal these came back as:
+
+| Field | Value |
+|---|---|
+| Type | CNAME |
+| Host / Name | `portal` |
+| Value | `de4r039v.up.railway.app` |
+| TTL | Auto |
+
+plus the matching `_railway-verify.portal` TXT record Railway displays
+alongside it.
 
 | Field | Value |
 |---|---|
@@ -89,7 +122,7 @@ Watch for a wildcard record (`*.dominatehomes.com`) pointing at the GHL site.
 If one exists it will swallow the subdomain, and the explicit `portal` CNAME
 needs to win or the wildcard needs removing.
 
-## 6. Checking it worked
+## 7. Checking it worked
 
 `https://portal.dominatehomes.com/healthz` returns `{"ok":true}` when the app
 is up and the database is reachable. It does not go through the session, so it
