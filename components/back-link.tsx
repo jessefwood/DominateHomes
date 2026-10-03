@@ -35,7 +35,22 @@ export function BackLink({
     setHasHistory(window.history.length > 1)
   }, [])
 
-  const classes = `inline-flex items-center gap-1.5 text-sm text-driftwood transition-colors hover:text-ink ${className}`
+  /**
+   * No display utility of its own.
+   *
+   * This used to start `inline-flex`, and a caller passing
+   * `hidden sm:inline-flex` to hide it on a phone got both. They are the same
+   * kind of utility, so which one wins is down to the order Tailwind emits
+   * them rather than the order they are written, and inline-flex won. The
+   * result was a Back control sitting on top of the project name on a phone.
+   *
+   * The caller decides whether it shows, so the caller supplies the display.
+   * `inline-flex` is in the default, which keeps every existing call site
+   * rendering exactly as before.
+   */
+  const classes = `items-center gap-1.5 text-sm text-driftwood transition-colors hover:text-ink ${
+    className || 'inline-flex'
+  }`
 
   const arrow = (
     <svg viewBox="0 0 16 16" aria-hidden className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">

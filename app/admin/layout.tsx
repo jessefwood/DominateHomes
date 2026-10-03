@@ -4,6 +4,7 @@ import { AccountMenu } from '@/components/account-menu'
 import { BackLink } from '@/components/back-link'
 import { Logomark } from '@/components/logo'
 import { AdminNav, type AdminLink } from '@/components/admin-nav'
+import { NavMenu } from '@/components/nav-menu'
 import { appUrlProblem, requireDesigner } from '@/lib/session'
 
 /**
@@ -57,13 +58,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
           <span className="hairline hidden h-7 w-px shrink-0 border-l sm:block" aria-hidden />
 
-          <div className="min-w-0 flex-1 overflow-x-auto">
+          {/*
+            From lg up this is the row it always was. Below that it was a strip
+            that scrolled sideways with nothing indicating it could, so the
+            last few sections were simply invisible on a phone.
+          */}
+          <div className="hidden min-w-0 flex-1 lg:block">
             <AdminNav links={NAV} />
           </div>
+
+          <div className="flex-1 lg:hidden" />
 
           <BackLink fallbackHref="/admin" className="hidden sm:inline-flex" />
 
           <AccountMenu name={user.name} email={user.email} isDesigner />
+
+          {/* Last in the bar, so it sits hard against the right edge. */}
+          <NavMenu
+            className="lg:hidden"
+            label="Admin"
+            links={NAV.map((link) => ({ href: link.href, label: link.label, exact: link.exact }))}
+          />
         </div>
       </header>
 

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AccountMenu } from '@/components/account-menu'
 import { BackLink } from '@/components/back-link'
 import { Logomark } from '@/components/logo'
+import { NavMenu } from '@/components/nav-menu'
 import { PortalNav, type PortalSection } from '@/components/portal-nav'
 import { ProjectSwitcher } from '@/components/project-switcher'
 import { unreadCount } from '@/lib/messages'
@@ -91,11 +92,28 @@ export default async function PortalLayout({
           <BackLink fallbackHref="/portal" className="hidden sm:inline-flex" />
 
           <AccountMenu name={user.name} email={user.email} isDesigner={isDesigner(user)} />
+
+          {/*
+            The sections, on a phone, and the last thing in the bar so it sits
+            hard against the right edge. The sidebar carries them from lg up,
+            where there is room; under that it wrapped twelve links into a
+            block of small targets above every page.
+          */}
+          <NavMenu
+            className="lg:hidden"
+            label="Sections"
+            links={SECTIONS.map((section) => ({
+              href: section.segment ? `/portal/${project.slug}/${section.segment}` : `/portal/${project.slug}`,
+              label: section.label,
+              exact: section.segment === '',
+              count: section.segment === 'messages' ? unread : undefined,
+            }))}
+          />
         </div>
       </header>
 
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row lg:gap-12 lg:px-8">
-        <aside className="lg:w-52 lg:shrink-0">
+        <aside className="hidden lg:block lg:w-52 lg:shrink-0">
           <div className="lg:sticky lg:top-24">
             <PortalNav
               slug={project.slug}
