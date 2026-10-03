@@ -3,7 +3,7 @@ import { SiteFooter, SiteNav } from '@/components/site-nav'
 
 export const metadata = {
   title: 'Dominate Homes',
-  description: 'Interior design for new builds on the Treasure Coast.',
+  description: 'Furnishing and styling new builds on the Treasure Coast.',
 }
 
 /**
@@ -41,7 +41,7 @@ const STEPS = [
 const TEAM = [
   {
     name: 'Davina Hughes',
-    role: 'Design',
+    role: 'Selections and styling',
     body: 'Davina runs the design side: the direction, the room plans, every selection and the install. She works in new builds across the Treasure Coast, and most of her projects start before the drywall is up.',
   },
   {
@@ -57,18 +57,18 @@ export default function HomePage() {
       <SiteNav />
 
       <main>
-        <section className="mx-auto max-w-6xl px-4 pt-16 pb-14 sm:px-8 sm:pt-24">
-          <p className="text-xs tracking-[0.2em] text-driftwood uppercase">Port St. Lucie, Florida</p>
-          <h1 className="font-display mt-4 max-w-3xl text-4xl leading-[1.1] text-ink sm:text-5xl">
+        <section className="mx-auto max-w-6xl px-6 pt-20 pb-20 sm:px-10 sm:pt-32 sm:pb-28">
+          <p className="eyebrow">Port St. Lucie, Florida</p>
+          <h1 className="font-display mt-6 max-w-4xl text-[2.75rem] leading-[1.04] text-ink sm:text-6xl lg:text-7xl">
             A finished house, not a folder of ideas.
           </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-driftwood-deep">
+          <p className="mt-8 max-w-xl text-lg leading-[1.7] text-driftwood-deep">
             We furnish new builds end to end, from the empty plan to the day you walk in. Every room costed,
             every piece measured against the wall it is going on, and every decision narrowed to three options
             so you can actually make it.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-10 flex flex-wrap gap-3">
             <Link
               href="#contact"
               className="rounded-md bg-ink px-5 py-2.5 text-oyster transition-opacity hover:opacity-90"
@@ -85,18 +85,18 @@ export default function HomePage() {
         </section>
 
         <section id="work" className="hairline border-t bg-white/60">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-8">
-            <h2 className="font-display text-2xl text-ink">How a project runs</h2>
+          <div className="mx-auto max-w-6xl px-6 py-24 sm:px-10 sm:py-28">
+            <h2 className="font-display text-3xl leading-tight text-ink sm:text-4xl">How a project runs</h2>
             <p className="mt-2 max-w-2xl text-driftwood-deep">
               You get a login to your own project from the first week, and it stays current until the last box
               is gone.
             </p>
 
-            <div className="mt-10 grid gap-8 sm:grid-cols-2">
+            <div className="mt-14 grid gap-x-12 gap-y-12 sm:grid-cols-2">
               {STEPS.map((step) => (
                 <div key={step.n}>
-                  <p className="font-display text-seaglass-deep">{step.n}</p>
-                  <h3 className="mt-1 font-display text-xl text-ink">{step.title}</h3>
+                  <p className="font-display text-lg text-seaglass-deep">{step.n}</p>
+                  <h3 className="mt-2 font-display text-2xl leading-snug text-ink">{step.title}</h3>
                   <p className="mt-2 leading-relaxed text-driftwood-deep">{step.body}</p>
                 </div>
               ))}
@@ -104,15 +104,15 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-8">
-          <div className="hairline rounded-lg border bg-white p-7 sm:p-10">
-            <h2 className="font-display text-2xl text-ink">Your project, in one place</h2>
+        <section className="mx-auto max-w-6xl px-6 py-24 sm:px-10 sm:py-28">
+          <div className="hairline rounded-lg border bg-white p-8 sm:p-12">
+            <h2 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Your project, in one place</h2>
             <p className="mt-3 max-w-2xl leading-relaxed text-driftwood-deep">
               Every client gets a portal. It holds the room plans, the three options for each piece, what you
               have approved, where the money has gone, the furniture you are keeping, and what is on order. You
               sign in with a link sent to your email, so there is no password to lose.
             </p>
-            <ul className="mt-6 grid gap-x-8 gap-y-2 text-driftwood-deep sm:grid-cols-2">
+            <ul className="mt-8 grid gap-x-12 gap-y-3 text-driftwood-deep sm:grid-cols-2">
               <li>Room by room, with real dimensions</li>
               <li>Three options per item, priced</li>
               <li>Written sign-off before anything orders</li>
@@ -124,12 +124,12 @@ export default function HomePage() {
         </section>
 
         <section id="team" className="hairline border-t bg-white/60">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-8">
-            <h2 className="font-display text-2xl text-ink">Who you are working with</h2>
-            <div className="mt-8 grid gap-8 sm:grid-cols-2">
+          <div className="mx-auto max-w-6xl px-6 py-24 sm:px-10 sm:py-28">
+            <h2 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Who you are working with</h2>
+            <div className="mt-12 grid gap-8 sm:grid-cols-2">
               {TEAM.map((person) => (
                 <div key={person.name} className="hairline rounded-lg border bg-white p-6">
-                  <p className="text-xs tracking-[0.18em] text-driftwood uppercase">{person.role}</p>
+                  <p className="eyebrow">{person.role}</p>
                   <h3 className="font-display mt-1 text-xl text-ink">{person.name}</h3>
                   <p className="mt-2 leading-relaxed text-driftwood-deep">{person.body}</p>
                 </div>
@@ -139,8 +139,8 @@ export default function HomePage() {
         </section>
 
         <section id="contact" className="mx-auto max-w-6xl px-4 py-16 sm:px-8">
-          <div className="hairline rounded-lg border bg-seaglass-wash p-7 sm:p-10">
-            <h2 className="font-display text-2xl text-ink">Starting a project</h2>
+          <div className="hairline rounded-lg border bg-seaglass-wash p-8 sm:p-12">
+            <h2 className="font-display text-3xl leading-tight text-ink sm:text-4xl">Starting a project</h2>
             <p className="mt-3 max-w-2xl leading-relaxed text-driftwood-deep">
               Tell us the plan, the builder and roughly when you close. We will tell you what the house needs
               and what it costs, honestly, before you commit to anything.

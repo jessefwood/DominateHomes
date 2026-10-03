@@ -43,7 +43,10 @@
   --color-clay-deep: #8a5139;
   --color-clay-wash: #f3e7e0;
 
-  --font-display: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  /* Loaded in app/layout.tsx by next/font, so these resolve to self-hosted
+     files rather than a request to Google on every page view. */
+  --font-display: var(--font-display-face), ui-serif, Georgia, serif;
+  --font-sans: var(--font-text-face), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -53,7 +56,29 @@ html {
 body {
   background: var(--color-oyster);
   color: var(--color-ink);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/*
+ * Display type. Fraunces' quirk axes are dialled out and optical sizing is let
+ * run, so a large headline tightens and gains contrast on its own. Negative
+ * tracking at display sizes is what stops a serif headline looking like a
+ * document instead of a masthead.
+ */
+.font-display {
+  font-family: var(--font-display);
+  font-variation-settings: "SOFT" 0, "WONK" 0;
+  letter-spacing: -0.02em;
+}
+
+/* Letterspaced small caps for eyebrows. Used sparingly and never below 11px. */
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-driftwood);
 }
 
 /* Thin deliberate lines. Never a heavy border. */
