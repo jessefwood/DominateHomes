@@ -1,5 +1,7 @@
 'use client'
 
+import { runAction } from '@/lib/client-action'
+
 import { useState, useTransition } from 'react'
 import { answerOpenItem } from './actions'
 
@@ -16,7 +18,7 @@ export function AnswerBox({ itemId, projectSlug }: { itemId: string; projectSlug
     }
     setError(null)
     startTransition(async () => {
-      const result = await answerOpenItem(itemId, answer, projectSlug)
+      const result = await runAction(() => answerOpenItem(itemId, answer, projectSlug))
       if (result?.error) setError(result.error)
     })
   }

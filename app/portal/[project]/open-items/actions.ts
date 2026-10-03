@@ -6,7 +6,11 @@ import { prisma } from '@/lib/db'
 import { requireOpenItemAccess } from '@/lib/projects'
 import { requireUser } from '@/lib/session'
 
-export async function answerOpenItem(itemId: string, answer: string, projectSlug: string) {
+export async function answerOpenItem(
+  itemId: string,
+  answer: string,
+  projectSlug: string,
+): Promise<{ error?: string; ok?: true }> {
   const trimmed = answer.trim()
   if (!trimmed) return { error: 'Put something in the box first.' }
   if (trimmed.length > 2000) {
@@ -30,5 +34,5 @@ export async function answerOpenItem(itemId: string, answer: string, projectSlug
 
   revalidatePath(`/portal/${projectSlug}/open-items`)
   revalidatePath(`/portal/${projectSlug}`)
-  return { ok: true }
+  return { ok: true as const }
 }

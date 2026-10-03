@@ -1,5 +1,7 @@
 'use client'
 
+import { runAction } from '@/lib/client-action'
+
 import { useState, useTransition } from 'react'
 import { APPROVAL_STATEMENT } from '@/lib/approval-statement'
 import { formatCents } from '@/lib/money'
@@ -45,7 +47,7 @@ export function ApproveRoom({
     }
     setError(null)
     startTransition(async () => {
-      const result = await approveRoom(roomId, name, projectSlug, roomSlug)
+      const result = await runAction(() => approveRoom(roomId, name, projectSlug, roomSlug))
       if (result.error) setError(result.error)
     })
   }

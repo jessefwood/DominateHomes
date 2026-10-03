@@ -1,5 +1,7 @@
 'use client'
 
+import { runAction } from '@/lib/client-action'
+
 import { useState, useTransition } from 'react'
 import { Pill } from '@/components/ui'
 import { connect, disconnect, test, toggle } from './actions'
@@ -31,7 +33,7 @@ export function IntegrationPanel({ data }: { data: PanelData }) {
   function run(fn: () => Promise<{ error?: string; note?: string }>) {
     setMessage(null)
     startTransition(async () => {
-      const result = await fn()
+      const result = await runAction(fn)
       if (result.error) setMessage({ kind: 'bad', text: result.error })
       else if (result.note) setMessage({ kind: 'ok', text: result.note })
     })
