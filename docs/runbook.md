@@ -47,11 +47,28 @@ ever offered A, CNAME, AAAA, TXT and MX because that is what its panel exposes,
 not what the zone supports.
 
 The "Invalid nameservers" warning on Davina's own Cloudflare account was not a
-misconfiguration. She added the domain to a **different** account than the one
-holding the zone, and got a different nameserver pair. **There is no migration
-to do and no nameserver change to make.** The open question is a human one:
-which Cloudflare login holds this domain. Given the 2024 registration it is
-likely an older account or a contractor's.
+misconfiguration. That account was created on 2026-10-02 and cannot be the one
+holding a zone registered on 2024-05-14. Adding the domain there produced a
+different nameserver pair, which is why it reads as invalid. **There is no
+migration to do and no nameserver change to make.**
+
+**Most likely the Cloudflare account belongs to GoHighLevel, not to anyone at
+Dominate Homes.** GHL resells domain registration through Cloudflare, which
+explains every observation at once: the registrar is Cloudflare, the zone is on
+Cloudflare nameservers, the apex A record is a Cloudflare anycast address, the
+Centerfy panel shows the real records, and nobody on the team has a login. The
+panel is the intended interface, not a second-class view of someone else's
+zone.
+
+**So do not chase Cloudflare access for routine work.** Use the Centerfy panel.
+If GHL does hold the registration, that is worth knowing as a business fact,
+because whoever holds a registration controls the domain, and it is worth
+transferring out eventually. It is not urgent and it blocks nothing.
+
+**The apex redirect therefore goes in Centerfy, not Cloudflare.** GoHighLevel
+has a URL Redirect feature: send `dominatehomes.com` to
+`https://www.dominatehomes.com`. No root CNAME, no MX conflict, no account
+recovery.
 
 `client transfer prohibited` is an ordinary registrar lock. It blocks nothing
 we want and should stay on.

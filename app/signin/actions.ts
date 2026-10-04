@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { RateLimitedError, requestSignInLink } from '@/lib/auth'
-import { appUrl } from '@/lib/session'
+import { AppUrlError, appUrl } from '@/lib/session'
 
 /**
  * Takes FormData and finishes with a redirect, so the sign-in form works with
@@ -41,6 +41,17 @@ export async function requestLink(formData: FormData): Promise<void> {
   } catch (error) {
     if (error instanceof RateLimitedError) {
       outcome = '/signin?problem=toomany'
+    } else if (error instanceof AppUrlError) {
+      // The base address is wrong, so any link built from it would be dead on
+      // arrival. Better to send nothing and say so than to email somebody a
+      // link that cannot work, which reads to them as their own fault.
+      //
+      // The message to the browser does not repeat what is misconfigured. The
+      // person reading it cannot act on that, and it is not a detail to put in
+      // front of whoever types an address into a public form. The real
+      // explanation goes to the server log and to admin.
+      console.error('Sign-in link not sent:', error.message)
+      outcome = '/signin?problem=misconfigured'
     } else {
       console.error('Sign-in link failed', error)
       outcome = '/signin?problem=failed'

@@ -65,11 +65,24 @@ model User {
   signInEnabled Boolean @default(true)
 
   approvals     Approval[]
-  answeredItems OpenItem[] @relation("AnsweredBy")
+  answeredItems OpenItem[]      @relation("AnsweredBy")
   loginTokens   LoginToken[]
   sessions      Session[]
   integrations  Integration[]
   memberships   ProjectMember[]
+
+  /// Files this person sent, and files they put in the trash. Two relations to
+  /// the same table, so both need naming.
+  uploads        Upload[] @relation("UploadedBy")
+  deletedUploads Upload[] @relation("UploadDeletedBy")
+
+  messages       Message[]
+  invitesSent    Invite[]        @relation("InviteCreatedBy")
+  accessReviewed AccessRequest[] @relation("AccessRequestReviewedBy")
+  auditEvents    AuditEvent[]
+
+  proposalsWritten  Proposal[] @relation("ProposalCreatedBy")
+  proposalsAccepted Proposal[] @relation("ProposalAcceptedBy")
 
   @@index([role])
 }
@@ -85,10 +98,10 @@ model LoginToken {
 
   /// SHA-256 of the token that went out in the email. Unique so a redemption
   /// is a single indexed lookup rather than a scan and compare.
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   /// Used to throttle how often links can be requested for one account.
   @@index([userId, createdAt])
@@ -137,9 +150,9 @@ model Project {
   acSqFt      Int
   totalSqFt   Int
 
-  phase       Phase
-  clientName  String
-  designer    String
+  phase      Phase
+  clientName String
+  designer   String
 
   /// The allocation the project is planned against, in cents. Mid tier.
   allocationCents Int
@@ -147,16 +160,49 @@ model Project {
   earliestCloseOn DateTime?
   installAfterOn  DateTime?
 
+  /// One photograph for the top of the project, and a line under it.
+  ///
+  /// A URL rather than an upload because there is nowhere to upload to yet:
+  /// no object storage is connected, and writing to local disk on Railway
+  /// would lose every picture on the next deploy. Davina pastes a link from
+  /// the vendor, the builder or her own Drive. When storage exists this
+  /// becomes the key into it and the screens do not change.
+  heroImageUrl String?
+  heroCaption  String?
+
+  /// Davina's own notes on the project. Never shown to the client.
+  designerNote String?
+
+  /// Whether this project appears in the work gallery on the public site.
+  ///
+  /// Off by default, and that default is the point. A client's house, budget
+  /// and decisions are private unless somebody deliberately decides otherwise,
+  /// so publishing is an action rather than something that happens because a
+  /// project exists. Only the photograph, the name, the community and
+  /// `siteSummary` are ever published, never anything from the rooms or the
+  /// budget.
+  showOnSite Boolean @default(false)
+
+  /// A line or two about the project, written for a stranger rather than for
+  /// the client. The portal copy talks to the client in the second person and
+  /// reads oddly on a public page, so this is written separately.
+  siteSummary String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members      ProjectMember[]
-  rooms        Room[]
-  budgetLines  BudgetLine[]
-  reusePieces  ReusePiece[]
-  artPieces    ArtPiece[]
-  openItems    OpenItem[]
-  milestones   Milestone[]
+  members     ProjectMember[]
+  rooms       Room[]
+  budgetLines BudgetLine[]
+  reusePieces ReusePiece[]
+  artPieces   ArtPiece[]
+  openItems   OpenItem[]
+  milestones  Milestone[]
+  proposals   Proposal[]
+  uploads     Upload[]
+  messages    Message[]
+  invites     Invite[]
+  auditEvents AuditEvent[]
 }
 
 enum RoomTier {
@@ -173,7 +219,7 @@ enum ApprovalStatus {
 }
 
 model Room {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -197,10 +243,15 @@ model Room {
 
   /// The contents line from the room schedule, and any constraint that limits
   /// what can be ordered (depth, wall run, stool count).
-  contents        String
-  constraintNote  String?
+  contents       String
+  constraintNote String?
   /// Set where the layout itself is unresolved, e.g. the great room TV wall.
-  unresolvedNote  String?
+  unresolvedNote String?
+
+  /// A photograph of the room, or of the direction for it. Same reasoning as
+  /// Project.heroImageUrl: a pasted URL until there is storage to upload to.
+  photoUrl     String?
+  photoCaption String?
 
   approvalStatus ApprovalStatus @default(NOT_READY)
 
@@ -209,6 +260,7 @@ model Room {
   budgetLines BudgetLine[]
   reusePieces ReusePiece[]
   artPieces   ArtPiece[]
+  uploads     Upload[]
 
   @@unique([projectId, slug])
   @@index([projectId, order])
@@ -241,10 +293,10 @@ model Selection {
 
   /// Stable human-facing reference, e.g. GR-SOFA. Shown in the portal and on
   /// the approval record so a line can be talked about over the phone.
-  ref      String @unique
+  ref      String  @unique
   name     String
   category String
-  qty      Int    @default(1)
+  qty      Int     @default(1)
   notes    String?
 
   /// The planning band for this item from the budget, in cents. These are
@@ -276,22 +328,22 @@ model Selection {
 }
 
 model SelectionOption {
-  id          String     @id @default(cuid())
+  id          String    @id @default(cuid())
   selectionId String
-  selection   Selection  @relation("SelectionOptions", fields: [selectionId], references: [id], onDelete: Cascade)
+  selection   Selection @relation("SelectionOptions", fields: [selectionId], references: [id], onDelete: Cascade)
 
   /// A, B or C. There is no fourth slot.
   slot OptionSlot
 
-  label       String
-  vendor      String
+  label        String
+  vendor       String
   /// Unit price in cents. Band-derived until priced against a live SKU.
-  priceCents  Int
+  priceCents   Int
   leadTimeDays Int?
-  dimensions  String?
-  photoUrl    String?
-  productUrl  String?
-  colorway    String?
+  dimensions   String?
+  photoUrl     String?
+  productUrl   String?
+  colorway     String?
 
   /// Custom and made-to-order goods cannot be returned. The approval screen
   /// has to say so at the point of signing.
@@ -325,7 +377,7 @@ model Approval {
   signedBy       User     @relation(fields: [signedByUserId], references: [id])
 
   /// Typed name at signing, kept verbatim alongside the user id.
-  signedByName String
+  signedByName   String
   /// The exact wording shown above the signature on the day, kept so the
   /// record shows what she was told, not what the template says now.
   statementShown String
@@ -353,18 +405,18 @@ model ApprovalLine {
   selection   Selection? @relation(fields: [selectionId], references: [id], onDelete: SetNull)
 
   /// Copied at signing.
-  selectionRef  String
-  itemName      String
-  optionLabel   String
-  optionSlot    OptionSlot
-  vendor        String
-  qty           Int
+  selectionRef   String
+  itemName       String
+  optionLabel    String
+  optionSlot     OptionSlot
+  vendor         String
+  qty            Int
   unitPriceCents Int
   lineTotalCents Int
-  leadTimeDays  Int?
-  dimensions    String?
-  nonReturnable Boolean
-  budgetType    BudgetType
+  leadTimeDays   Int?
+  dimensions     String?
+  nonReturnable  Boolean
+  budgetType     BudgetType
 
   @@index([approvalId])
 }
@@ -446,9 +498,9 @@ model ReusePiece {
   condition String?
   photoUrl  String?
 
-  status KeepStatus @default(UNDECIDED)
+  status            KeepStatus @default(UNDECIDED)
   /// Set where the destination depends on which reuse scenario is chosen.
-  scenarioDependent Boolean @default(false)
+  scenarioDependent Boolean    @default(false)
 
   destinationRoomId String?
   destinationRoom   Room?   @relation(fields: [destinationRoomId], references: [id], onDelete: SetNull)
@@ -504,6 +556,12 @@ model ArtPiece {
 
   /// Heavy pieces under glass need studs or a cleat.
   needsStudsOrCleat Boolean @default(false)
+
+  /// A photograph of the piece. Art is the one part of the project that
+  /// cannot be described in words at all, so a list of titles with no
+  /// pictures is close to useless to the person deciding.
+  photoUrl     String?
+  photoCaption String?
 
   destinationRoomId String?
   destinationRoom   Room?   @relation(fields: [destinationRoomId], references: [id], onDelete: SetNull)
@@ -567,8 +625,8 @@ model Milestone {
 
   /// The date where one is fixed, and the label the project actually uses
   /// where the timing is a window rather than a day.
-  occursOn   DateTime?
-  dateLabel  String
+  occursOn  DateTime?
+  dateLabel String
 
   /// The December ordering deadline is called out on the timeline.
   isDeadline Boolean @default(false)
@@ -600,7 +658,7 @@ model PurchaseOrder {
 
   /// Vendors lock price at order acknowledgement, not delivery, so the
   /// acknowledged price is its own field.
-  orderedPriceCents     Int
+  orderedPriceCents      Int
   acknowledgedPriceCents Int?
 
   orderedAt      DateTime  @default(now())
@@ -687,4 +745,471 @@ model Integration {
   updatedAt       DateTime @updatedAt
   updatedByUserId String?
   updatedBy       User?    @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+}
+
+// ---------------------------------------------------------------------------
+// Proposals: the priced document the client says yes to
+// ---------------------------------------------------------------------------
+
+enum ProposalTier {
+  LEAN
+  RECOMMENDED
+  ELEVATED
+}
+
+enum ProposalStatus {
+  /// Being written. Invisible to the client, every figure still editable.
+  DRAFT
+  /// Issued. Frozen, and the client can read it and accept it.
+  SENT
+  /// Accepted with a typed signature. Frozen forever.
+  ACCEPTED
+  /// She said no, or asked for a different tier.
+  DECLINED
+  /// Pulled before she acted on it, usually because it was wrong.
+  WITHDRAWN
+}
+
+/// A pricing proposal, and, once accepted, the agreement itself.
+///
+/// This mirrors the invoice Davina already sends: priced rooms, the design fee
+/// and expenses kept apart from them, a payment schedule, what is in and out
+/// of scope, and a signature block. One document, because that is the document
+/// the client actually receives and signs.
+///
+/// RULE 3 APPLIES HERE, for the same reason it applies to Approval. Every
+/// money value below is a literal copy taken when the proposal was sent. None
+/// of them is read back through a relation, so re-pricing an option or editing
+/// a budget line next month cannot retroactively change what she agreed to.
+/// The tier is recorded rather than recomputed for the same reason.
+///
+/// RULE 2 APPLIES TOO, and is the reason there is no `projectTotalCents`
+/// column. The furnishing side and the designer's side are stored as two
+/// separate snapshot totals and are never added together in the database. The
+/// document does show the client what the two come to, because she cannot say
+/// yes to a number she has not been shown, but that sum is computed in the
+/// view and stored nowhere. See lib/proposals.ts.
+model Proposal {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  /// The number on the paper, e.g. DH.2026.1003. Unique so two drafts cannot
+  /// go out under one reference.
+  number String @unique
+
+  tier   ProposalTier
+  status ProposalStatus @default(DRAFT)
+
+  /// How the client is addressed on the document, e.g. "Abbie and Russell".
+  preparedForLabel String
+  /// The opening paragraph, in Davina's words. Written per proposal because
+  /// it names the conversation it came out of.
+  intro            String
+
+  /// Snapshot of the furnishing side, in cents. Rates are basis points so a
+  /// 7% tax is 700 and nothing is stored as a float.
+  furnishingsSubtotalCents Int
+  taxRateBasisPoints       Int
+  taxCents                 Int
+  freightRateBasisPoints   Int
+  freightCents             Int
+  /// furnishingsSubtotal + tax + freight. A furnishing-side figure only.
+  goodsDeliveredCents      Int
+
+  /// Snapshot of the designer's side, in cents. Kept apart from every figure
+  /// above and never added to one of them here.
+  designFeeRateBasisPoints Int
+  feesAndExpensesCents     Int
+
+  issuedOn     DateTime?
+  validUntilOn DateTime?
+  sentAt       DateTime?
+
+  /// Acceptance. The statement is copied in so the record shows the words she
+  /// was shown on the day rather than whatever the template says later.
+  acceptedAt       DateTime?
+  acceptedByName   String?
+  acceptedByUserId String?
+  acceptedBy       User?     @relation("ProposalAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  statementShown   String?
+
+  declinedAt  DateTime?
+  declineNote String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdByUserId String
+  createdBy       User     @relation("ProposalCreatedBy", fields: [createdByUserId], references: [id])
+
+  lines    ProposalLine[]
+  payments ProposalPayment[]
+  scope    ProposalScopeItem[]
+
+  @@index([projectId, status])
+}
+
+/// One priced row. Rooms on the furnishing side, the fee and each expense on
+/// the designer's side, told apart by `type` and nothing else.
+model ProposalLine {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  /// Rule 2. Required, with no default, so a line cannot exist without
+  /// declaring which side of the wall it is on.
+  type BudgetType
+
+  /// "Great Room", or "Design fee".
+  label  String
+  /// The plain-English "what it covers" column. Null for a line that needs no
+  /// explaining.
+  detail String?
+
+  amountCents Int
+  order       Int
+
+  @@index([proposalId])
+}
+
+/// One instalment. Copied at issue, not derived, so the schedule she agreed to
+/// survives a later change to the totals.
+model ProposalPayment {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  /// "On acceptance", "January 2027".
+  whenLabel String
+  detail    String?
+
+  amountCents Int
+  order       Int
+
+  stage PaymentStage
+
+  /// Set when this instalment is settled. The reference is whatever the
+  /// payment processor called it, kept for reconciliation only.
+  paidAt  DateTime?
+  paidRef String?
+
+  /// The Stripe Checkout Session opened for this instalment, and the
+  /// PaymentIntent it produced. Kept so a settled payment traces back to the
+  /// exact row it belongs to without matching on amount.
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String? @unique
+
+  @@index([proposalId])
+}
+
+/// Which instalment a charge is, stamped on the Stripe charge as metadata.
+///
+/// Without it, telling a deposit from a balance payment means comparing
+/// amounts and guessing, which stops working the moment two projects run at
+/// once or a schedule is renegotiated.
+enum PaymentStage {
+  DEPOSIT
+  GOODS_1
+  GOODS_2
+  FINAL
+  OTHER
+}
+
+enum ProposalScopeKind {
+  INCLUDED
+  NOT_INCLUDED
+  /// What she already owns and we are planning around at no cost. On the
+  /// document this is its own section, and it is worth its own kind because it
+  /// is the part clients are most surprised to see credited.
+  CLIENT_OWNED
+}
+
+model ProposalScopeItem {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  kind  ProposalScopeKind
+  text  String
+  order Int
+
+  @@index([proposalId])
+}
+
+// ---------------------------------------------------------------------------
+// Files
+//
+// Three rules here, same standing as the three at the top of this file.
+//
+// A. NOTHING IN THE BUCKET IS PUBLIC. `storageKey` is a path inside a private
+//    bucket, never a URL. Reads happen through a route that proves the person
+//    may see the file and then redirects to a link that expires in minutes.
+//    There is no column here for a public address, deliberately.
+//
+// B. A FILE IS NOT REAL UNTIL `confirmedAt` IS SET. The browser uploads
+//    straight to the bucket, so the server never sees the bytes and cannot
+//    take the browser's word for the size or the type. The row is written
+//    first, the upload happens, then the server asks the bucket what actually
+//    arrived. A row with no `confirmedAt` is an upload that failed and is not
+//    shown to anybody.
+//
+// C. DELETING SETS `deletedAt`. It does not remove the row and it does not
+//    remove the object. Admins can put a file back for 30 days, and nothing
+//    in the application ever hard deletes a client's file.
+// ---------------------------------------------------------------------------
+
+/// Who sent it. Worth storing rather than deriving from the uploader's role,
+/// because a designer's role could change later and this is a record of what
+/// happened at the time.
+enum UploadSource {
+  CLIENT
+  DESIGNER
+}
+
+/// What it is, for grouping on screen. Derived from the content type when the
+/// row is written, so the screens never parse MIME strings.
+enum UploadKind {
+  PHOTO
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+model Upload {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  uploadedById String
+  uploadedBy   User   @relation("UploadedBy", fields: [uploadedById], references: [id])
+
+  /// Which room it is about, when they said. Optional because most of what a
+  /// client sends early on is the whole house, not one room.
+  roomId String?
+  room   Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  /// The path inside the private bucket. Unique, because the upload's own id
+  /// is part of it, which is also what stops two people sending IMG_4821.jpg
+  /// on the same afternoon from overwriting each other.
+  storageKey String @unique
+
+  /// The name as it was on their phone, cleaned. Shown on screen and used for
+  /// the download filename.
+  filename String
+
+  /// Both read back off the bucket after the upload, not taken from the
+  /// browser. See rule B above.
+  contentType String
+  sizeBytes   Int
+
+  kind   UploadKind
+  source UploadSource
+
+  /// What they said about it. This is the measurement, the "this is the wall
+  /// I meant", the thing that makes a photo of a bare room useful.
+  caption String?
+
+  confirmedAt DateTime?
+
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("UploadDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  /// The list a project screen draws, newest first, is this index.
+  @@index([projectId, deletedAt, createdAt])
+  @@index([roomId])
+  @@index([uploadedById])
+}
+
+// ---------------------------------------------------------------------------
+// Letting people in
+//
+// There is still no self-signup. These two tables are the only ways an
+// account comes into being, and both end with a designer deciding:
+//
+//   Invite        a designer names someone and sends them a link.
+//   AccessRequest a stranger asks, and a designer approves or declines.
+//
+// An approved request becomes an invite. Nothing creates a user row on its
+// own, and nothing here can grant the designer role.
+// ---------------------------------------------------------------------------
+
+/// An invitation to one project, sent by a designer.
+///
+/// Same shape as LoginToken on purpose: the emailed secret is never stored,
+/// only its SHA-256 hash, so a leak of this table cannot be used to get in.
+model Invite {
+  id String @id @default(cuid())
+
+  email String
+  name  String
+
+  /// The project they are being added to, and how they want to be described
+  /// on it, e.g. "Abbie and Russell". Null project means an invitation to the
+  /// portal with no project attached yet, which is rare but legitimate when
+  /// the project has not been set up.
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  label     String?
+
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  /// Accepting creates the user row and the membership, then stamps this.
+  acceptedAt DateTime?
+  /// A designer can withdraw an invitation that has not been accepted.
+  revokedAt  DateTime?
+
+  createdById String
+  createdBy   User   @relation("InviteCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([projectId])
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+/// Somebody asking to be let in, from the public form.
+///
+/// Holds no credential and grants nothing. It is a message with a status on
+/// it. Approving one sends an invite; the invite is what actually lets them
+/// in, which keeps the decision and the credential in separate places.
+model AccessRequest {
+  id String @id @default(cuid())
+
+  email String
+  name  String
+  phone String?
+  /// What they typed about their project. Rendered as text, never as markup.
+  note  String?
+
+  status AccessRequestStatus @default(PENDING)
+
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?     @relation("AccessRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  /// Why it was declined, for our own records. Never sent to them.
+  reviewNote   String?
+
+  createdAt DateTime @default(now())
+
+  /// The pending count in the admin banner, and the list under it.
+  @@index([status, createdAt])
+  @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// Messages
+// ---------------------------------------------------------------------------
+
+/// One message in a project's thread.
+///
+/// Scoped to a project rather than to a pair of people, because the thread is
+/// about the house. Both designers see and answer the same thread, which is
+/// the point: a client should not have to remember which of us she told.
+model Message {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  /// Plain text. Rendered as text, with line breaks preserved and nothing
+  /// else interpreted.
+  body String
+
+  /// When each side last saw it. Two timestamps rather than a boolean,
+  /// because "when" is the useful thing and because the two sides read
+  /// independently.
+  readByClientAt   DateTime?
+  readByDesignerAt DateTime?
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, deletedAt, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// The record of what happened
+// ---------------------------------------------------------------------------
+
+/// Things worth being able to answer "when did that happen" about.
+///
+/// Deliberately not every write. A log that records everything is a log
+/// nobody reads. This covers getting in, being let in, and anything that
+/// moves or removes a client's file.
+enum AuditAction {
+  SIGN_IN_REQUESTED
+  SIGNED_IN
+  SIGNED_OUT
+  ACCESS_OPENED
+  ACCESS_CLOSED
+  INVITE_SENT
+  INVITE_ACCEPTED
+  INVITE_REVOKED
+  ACCESS_REQUESTED
+  ACCESS_APPROVED
+  ACCESS_DECLINED
+  FILE_UPLOADED
+  FILE_DELETED
+  FILE_RESTORED
+  MESSAGE_SENT
+}
+
+model AuditEvent {
+  id     String      @id @default(cuid())
+  action AuditAction
+
+  /// Who did it. Null when a signed-out visitor did, which is the case for a
+  /// request for access and for a sign-in link.
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  /// The address involved when there is no account to point at. Also kept for
+  /// account events, so the row still reads correctly after a rename.
+  actorEmail String?
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  /// One line, already written for a person to read. The screen shows this
+  /// rather than reassembling a sentence from the columns.
+  summary String
+
+  /// Which record, so a row can be traced back without a join per action.
+  subjectType String?
+  subjectId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([projectId, createdAt])
+}
+
+/// Small pieces of the public site that Davina should be able to change
+/// without a deploy: the photograph at the top, the two team photographs, the
+/// line under the headline.
+///
+/// A key and a value rather than a column per setting, because the alternative
+/// is a migration every time the marketing page wants one more picture. The
+/// known keys and their defaults live in lib/site.ts, so nothing reads a raw
+/// string out of here and hopes.
+///
+/// Public by definition. Nothing private goes in this table.
+model SiteSetting {
+  key   String @id
+  value String
+
+  updatedAt DateTime @updatedAt
 }

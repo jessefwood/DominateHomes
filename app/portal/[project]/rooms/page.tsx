@@ -1,5 +1,5 @@
 import { ApprovalStatus, RoomTier, SelectionStatus } from '@prisma/client'
-import { Card, EmptyState, PageHeader, Pill } from '@/components/ui'
+import { Card, EmptyState, PageHeader, Photo, PhotoMissing, Pill } from '@/components/ui'
 import { prisma } from '@/lib/db'
 import { formatBand, formatCents } from '@/lib/money'
 import { requireProjectAccess } from '@/lib/projects'
@@ -54,7 +54,15 @@ export default async function RoomsPage({
           const size = dimensions(room.widthFt, room.lengthFt)
 
           return (
-            <Card key={room.id} href={`/portal/${project.slug}/rooms/${room.slug}`} className="p-5">
+            <Card key={room.id} href={`/portal/${project.slug}/rooms/${room.slug}`}>
+              {room.photoUrl ? (
+                <Photo src={room.photoUrl} alt={room.name} aspect="aspect-[3/2]" className="rounded-none" />
+              ) : (
+                <PhotoMissing aspect="aspect-[3/2]" className="rounded-none border-0 border-b">
+                  Photos land here as the room comes together
+                </PhotoMissing>
+              )}
+              <div className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="font-display text-lg leading-tight text-ink">{room.name}</h2>
@@ -96,6 +104,7 @@ export default async function RoomsPage({
                     ? `All ${total} items picked`
                     : `${decided} of ${total} items picked`}
               </p>
+              </div>
             </Card>
           )
         })}

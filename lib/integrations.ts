@@ -20,30 +20,48 @@ export type IntegrationSpec = {
   publicLabel: string | null
   publicPrefix: string | null
   docsNote: string
+  /**
+   * Set where the app does not actually read this integration's stored key.
+   *
+   * Resend is the case. lib/mailer.ts reads RESEND_API_KEY from the
+   * environment directly and never calls secretFor(RESEND), so a key pasted
+   * into that panel is encrypted, stored, and read by nothing. Leaving the
+   * panel looking available is worse than two sources of truth, because the
+   * losing source is not even wired up. So the panel says so, and the save
+   * path refuses rather than accepting a key it will ignore.
+   */
+  managedElsewhere: { by: string; why: string } | null
 }
 
 export const INTEGRATIONS: IntegrationSpec[] = [
   {
     kind: IntegrationKind.STRIPE,
     name: 'Stripe',
-    blurb: 'Takes deposits and payments from clients. Nothing is charged without you setting it up here first.',
+    blurb:
+      'Takes deposits and payments from clients. Nothing is charged without you setting it up here first.',
     secretLabel: 'Secret key',
     secretPrefix: 'sk_',
     publicLabel: 'Publishable key',
     publicPrefix: 'pk_',
     docsNote:
-      'Both keys are in the Stripe dashboard under Developers, API keys. Use the live keys when you are ready to take real money, and the test keys until then.',
+      'Both keys are in the Stripe dashboard under Developers, API keys. Create a restricted key rather than using the standard secret key: the only permission the portal needs today is read on Account, because validating the key is the only Stripe call this app makes. Nothing here charges anybody yet.',
+    managedElsewhere: null,
   },
   {
     kind: IntegrationKind.RESEND,
     name: 'Resend',
-    blurb: 'Sends the sign-in links clients use to get into their portal. Without it nobody can log in.',
+    blurb:
+      'Sends the sign-in links clients use to get into their portal. Without it nobody can log in.',
     secretLabel: 'API key',
     secretPrefix: 're_',
     publicLabel: 'Send from address',
     publicPrefix: null,
     docsNote:
       'The API key is in the Resend dashboard under API Keys. The from address has to be on a domain you have verified with Resend.',
+    managedElsewhere: {
+      by: 'the RESEND_API_KEY and MAIL_FROM variables in Railway',
+      why: 'Sign-in email is sent straight from those variables, and this panel is not wired to it. A key saved here would be stored and then ignored, which is why saving is switched off rather than left looking available.',
+    },
   },
 ]
 
@@ -69,6 +87,7 @@ export type IntegrationSummary = {
   lastCheckedAt: Date | null
   lastCheckOk: boolean | null
   lastCheckNote: string | null
+  managedElsewhere: { by: string; why: string } | null
 }
 
 function summarise(spec: IntegrationSpec, row: Integration | undefined): IntegrationSummary {
@@ -87,12 +106,18 @@ function summarise(spec: IntegrationSpec, row: Integration | undefined): Integra
     lastCheckedAt: row?.lastCheckedAt ?? null,
     lastCheckOk: row?.lastCheckOk ?? null,
     lastCheckNote: row?.lastCheckNote ?? null,
+    managedElsewhere: spec.managedElsewhere,
   }
 }
 
 export async function listIntegrations(): Promise<IntegrationSummary[]> {
   const rows = await prisma.integration.findMany()
-  return INTEGRATIONS.map((entry) => summarise(entry, rows.find((row) => row.kind === entry.kind)))
+  return INTEGRATIONS.map((entry) =>
+    summarise(
+      entry,
+      rows.find((row) => row.kind === entry.kind),
+    ),
+  )
 }
 
 export class CredentialRejected extends Error {}
@@ -106,12 +131,22 @@ export async function connectIntegration(input: {
 }) {
   if (!credentialKeyConfigured()) {
     throw new CredentialRejected(
-      'This server cannot store credentials safely yet because CREDENTIAL_KEY is not set. ' +
-        'Nothing was saved. Set it in the hosting environment and try again.',
+      'This server cannot store credentials safely yet because CREDENTIAL_KEY is not set, or is ' +
+        'set to something that is not a 32 byte key. Nothing was saved. Fix it in the hosting ' +
+        'environment and try again.',
     )
   }
 
   const entry = spec(input.kind)
+
+  // Storing a key nothing reads is worse than refusing it: the panel would go
+  // green and the real mechanism would stay invisible.
+  if (entry.managedElsewhere) {
+    throw new CredentialRejected(
+      `${entry.name} is configured through ${entry.managedElsewhere.by}, not here. ` +
+        'Nothing was saved, because this panel is not wired to it.',
+    )
+  }
   const secret = input.secret.trim()
   const publicValue = input.publicValue?.trim() || null
 
@@ -160,7 +195,11 @@ export async function connectIntegration(input: {
   })
 }
 
-export async function setIntegrationEnabled(kind: IntegrationKind, enabled: boolean, userId: string) {
+export async function setIntegrationEnabled(
+  kind: IntegrationKind,
+  enabled: boolean,
+  userId: string,
+) {
   return prisma.integration.update({
     where: { kind },
     data: { enabled, updatedByUserId: userId },
@@ -215,7 +254,10 @@ export async function checkIntegration(kind: IntegrationKind, userId: string) {
       })
       ok = response.ok
       if (ok) {
-        const account = (await response.json()) as { id?: string; business_profile?: { name?: string } }
+        const account = (await response.json()) as {
+          id?: string
+          business_profile?: { name?: string }
+        }
         note = `Connected to ${account.business_profile?.name ?? account.id ?? 'a Stripe account'}.`
       } else {
         note = `Stripe refused the key (${response.status}). Check you pasted the secret key and not an old one.`
@@ -236,7 +278,12 @@ export async function checkIntegration(kind: IntegrationKind, userId: string) {
 
   await prisma.integration.update({
     where: { kind },
-    data: { lastCheckedAt: new Date(), lastCheckOk: ok, lastCheckNote: note, updatedByUserId: userId },
+    data: {
+      lastCheckedAt: new Date(),
+      lastCheckOk: ok,
+      lastCheckNote: note,
+      updatedByUserId: userId,
+    },
   })
 
   return { ok, note }

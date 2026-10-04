@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { type NextRequest } from 'next/server'
 import { redeemSignInLink, SESSION_COOKIE } from '@/lib/auth'
+import { redirectTo } from '@/lib/http'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,16 +15,16 @@ export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token')
 
   if (!token) {
-    return NextResponse.redirect(new URL('/signin?problem=missing', request.url))
+    return redirectTo('/signin?problem=missing')
   }
 
   const result = await redeemSignInLink(token)
 
   if (!result.ok) {
-    return NextResponse.redirect(new URL(`/signin?problem=${result.reason}`, request.url))
+    return redirectTo(`/signin?problem=${result.reason}`)
   }
 
-  const response = NextResponse.redirect(new URL('/portal', request.url))
+  const response = redirectTo('/portal')
 
   response.cookies.set({
     name: SESSION_COOKIE,

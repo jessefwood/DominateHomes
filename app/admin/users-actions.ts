@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { Role } from '@prisma/client'
+import { AuditAction, record } from '@/lib/audit'
 import { prisma } from '@/lib/db'
 import { requireDesigner } from '@/lib/session'
 
@@ -52,6 +53,18 @@ export async function setSignIn(userId: string, enabled: boolean): Promise<Resul
     await prisma.loginToken.deleteMany({ where: { userId, usedAt: null } })
   }
 
+  // Who opened or closed somebody's access, and when, is the single most
+  // useful thing in the log: it is the question that gets asked months later
+  // when a client says she could not get in.
+  await record({
+    action: enabled ? AuditAction.ACCESS_OPENED : AuditAction.ACCESS_CLOSED,
+    actor,
+    subjectType: 'User',
+    subjectId: target.id,
+    summary: `${actor.name} ${enabled ? 'opened' : 'closed'} access for ${target.name} (${target.email})`,
+  })
+
   revalidatePath('/admin')
+  revalidatePath('/admin/activity')
   return { ok: true }
 }
