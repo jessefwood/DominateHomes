@@ -79,4 +79,5 @@ export const AUDIT_LABEL: Record<AuditAction, string> = {
   FILE_DELETED: 'File moved to trash',
   FILE_RESTORED: 'File put back',
   MESSAGE_SENT: 'Message sent',
+  HOMEWORK_TURNED_IN: 'Homework turned in',
 }

@@ -39,6 +39,10 @@ datasource db {
 enum Role {
   CLIENT
   DESIGNER
+  /// Davina's agents, here for the training course. An agent sees the course
+  /// and their own homework and nothing else: no project is ever theirs,
+  /// because project access is membership and they have none.
+  AGENT
 }
 
 /// Carries no password hash. Sign-in is by emailed magic link, so the only
@@ -76,10 +80,12 @@ model User {
   uploads        Upload[] @relation("UploadedBy")
   deletedUploads Upload[] @relation("UploadDeletedBy")
 
-  messages       Message[]
-  invitesSent    Invite[]        @relation("InviteCreatedBy")
-  accessReviewed AccessRequest[] @relation("AccessRequestReviewedBy")
-  auditEvents    AuditEvent[]
+  messages         Message[]
+  worksheetAnswers WorksheetAnswer[]
+  homeworkTurnIns  HomeworkTurnIn[]
+  invitesSent      Invite[]          @relation("InviteCreatedBy")
+  accessReviewed   AccessRequest[]   @relation("AccessRequestReviewedBy")
+  auditEvents      AuditEvent[]
 
   proposalsWritten  Proposal[] @relation("ProposalCreatedBy")
   proposalsAccepted Proposal[] @relation("ProposalAcceptedBy")
@@ -1040,6 +1046,11 @@ model Upload {
 ///
 /// Same shape as LoginToken on purpose: the emailed secret is never stored,
 /// only its SHA-256 hash, so a leak of this table cannot be used to get in.
+enum InviteRole {
+  CLIENT
+  AGENT
+}
+
 model Invite {
   id String @id @default(cuid())
 
@@ -1053,6 +1064,10 @@ model Invite {
   projectId String?
   project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   label     String?
+
+  /// What accepting makes them. Only ever a client or an agent: there is no
+  /// designer value in InviteRole, so an invitation still cannot make one.
+  role InviteRole @default(CLIENT)
 
   tokenHash  String    @unique
   expiresAt  DateTime
@@ -1164,6 +1179,7 @@ enum AuditAction {
   FILE_DELETED
   FILE_RESTORED
   MESSAGE_SENT
+  HOMEWORK_TURNED_IN
 }
 
 model AuditEvent {
@@ -1212,4 +1228,75 @@ model SiteSetting {
   value String
 
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// The training course
+// ---------------------------------------------------------------------------
+//
+// The course itself (modules, lessons, worksheet questions) lives in code, in
+// content/courses/, and ships with every deploy. Only what people do with it
+// lives here: an agent's answers, when they turned homework in, and where the
+// live session is. That keeps the lesson text reviewable in a pull request and
+// means there is no import step between writing a lesson and teaching it.
+//
+// Rows point at the content by key (course slug, module key, field key) rather
+// than by foreign key, because the content has no table. Renaming a key in the
+// content file orphans the answers stored under the old one, so keys are
+// treated as permanent once agents have written against them.
+
+/// One agent's answer to one worksheet question.
+model WorksheetAnswer {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseSlug String
+  moduleKey  String
+  fieldKey   String
+
+  /// Shaped by the question: text, a number, a list of ticked boxes, or the
+  /// parts of a fill-in-the-blanks sentence. Checked against the content
+  /// before it is written, see lib/course.ts.
+  value Json
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseSlug, moduleKey, fieldKey])
+  @@index([courseSlug, moduleKey])
+}
+
+/// The moment an agent said their homework for a module is done.
+///
+/// They can still change answers afterwards. This records that they handed it
+/// in and when, which is what Davina checks on Monday.
+model HomeworkTurnIn {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseSlug String
+  moduleKey  String
+
+  turnedInAt DateTime @default(now())
+
+  @@unique([userId, courseSlug, moduleKey])
+  @@index([courseSlug, moduleKey])
+}
+
+/// Where the presenter is, so everyone following along lands on the same
+/// slide. One row per course; no row, or `endedAt` set, means not live.
+model LiveSession {
+  courseSlug String @id
+
+  moduleKey String
+  step      Int
+
+  presenterName String
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+  updatedAt     DateTime  @updatedAt
 }

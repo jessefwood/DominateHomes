@@ -19,10 +19,13 @@ export function AccountMenu({
   name,
   email,
   isDesigner,
+  isAgent = false,
 }: {
   name: string
   email: string
   isDesigner: boolean
+  /** An agent has no projects, so the menu offers the course instead. */
+  isAgent?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const wrap = useRef<HTMLDivElement>(null)
@@ -83,9 +86,17 @@ export function AccountMenu({
             <p className="mt-0.5 truncate text-xs text-driftwood">{email}</p>
           </div>
 
-          <Link href="/portal" className={item} onClick={() => setOpen(false)}>
-            All your projects
-          </Link>
+          {isAgent ? null : (
+            <Link href="/portal" className={item} onClick={() => setOpen(false)}>
+              All your projects
+            </Link>
+          )}
+
+          {isAgent || isDesigner ? (
+            <Link href="/learn" className={item} onClick={() => setOpen(false)}>
+              Training course
+            </Link>
+          ) : null}
 
           {isDesigner ? (
             <Link href="/admin" className={item} onClick={() => setOpen(false)}>
