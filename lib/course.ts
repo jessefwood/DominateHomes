@@ -13,6 +13,7 @@ import {
   type Module,
 } from './course-content'
 import { prisma } from './db'
+import { PLAN_FIELDS, PLAN_KEY, PRIVATE_KEYS, withoutPrivate, type PlanStartValues } from './plan'
 
 /**
  * The training course: who can open it, saving answers, turning homework in,
@@ -90,9 +91,7 @@ export async function saveAnswer(
 ): Promise<void> {
   if (!canOpenCourses(user)) throw new AnswerError('This account does not take the course.')
 
-  const course = courseBySlug(courseSlug)
-  const unit = course ? findModule(course, moduleKey) : undefined
-  const field = unit ? findField(unit, fieldKey) : undefined
+  const field = fieldFor(courseSlug, moduleKey, fieldKey)
   if (!field) throw new AnswerError('That question is not on this worksheet any more. Refresh the page.')
 
   const clean = parseAnswer(field, value) as Prisma.InputJsonValue
@@ -100,6 +99,70 @@ export async function saveAnswer(
   await prisma.worksheetAnswer.upsert({
     where: { userId_courseSlug_moduleKey_fieldKey: { userId: user.id, courseSlug, moduleKey, fieldKey } },
     create: { userId: user.id, courseSlug, moduleKey, fieldKey, value: clean },
+    update: { value: clean },
+  })
+}
+
+/** A question on a module's worksheet, or on the 2027 plan. */
+function fieldFor(courseSlug: string, key: string, fieldKey: string) {
+  const course = courseBySlug(courseSlug)
+  if (!course) return undefined
+  if (key === PLAN_KEY) return PLAN_FIELDS.find((field) => field.key === fieldKey)
+  const unit = findModule(course, key)
+  return unit ? findField(unit, fieldKey) : undefined
+}
+
+// ---------------------------------------------------------------------------
+// The 2027 plan
+// ---------------------------------------------------------------------------
+
+/** Where an agent's plan starts, from what Davina loaded. Null if nothing was. */
+export async function planStartFor(email: string): Promise<PlanStartValues | null> {
+  const row = await prisma.planStart.findUnique({ where: { email: email.trim().toLowerCase() } })
+  if (!row) return null
+  return {
+    closings2026: row.closings2026,
+    listingSides: row.listingSides,
+    buyerSides: row.buyerSides,
+    takeHome: Math.round(row.takeHomeCents / 100),
+    databaseCount: row.databaseCount,
+    target2027: row.target2027,
+  }
+}
+
+/**
+ * An agent's plan answers. The design side gets them without the private
+ * section: the agent's own page is the only place those are ever sent.
+ */
+export async function planAnswersFor(owner: User, viewer: User, courseSlug: string): Promise<Answers> {
+  const answers = await answersFor(owner.id, courseSlug, PLAN_KEY)
+  return viewer.id === owner.id ? answers : withoutPrivate(answers)
+}
+
+/**
+ * Davina filling in an agent's plan with them.
+ *
+ * She can change anything but the private section, which is the agent's
+ * alone. Writes go to the agent's row, never to hers.
+ */
+export async function savePlanAnswerFor(
+  actor: User,
+  owner: User,
+  courseSlug: string,
+  fieldKey: string,
+  value: unknown,
+): Promise<void> {
+  if (actor.role !== Role.DESIGNER) throw new AnswerError('Only Davina can work on somebody else’s plan.')
+  if (owner.role !== Role.AGENT) throw new AnswerError('That account does not have a plan.')
+  if (PRIVATE_KEYS.has(fieldKey)) throw new AnswerError('That part of the plan is private to the agent.')
+
+  const field = fieldFor(courseSlug, PLAN_KEY, fieldKey)
+  if (!field) throw new AnswerError('That is not on the plan any more. Refresh the page.')
+
+  const clean = parseAnswer(field, value) as Prisma.InputJsonValue
+  await prisma.worksheetAnswer.upsert({
+    where: { userId_courseSlug_moduleKey_fieldKey: { userId: owner.id, courseSlug, moduleKey: PLAN_KEY, fieldKey } },
+    create: { userId: owner.id, courseSlug, moduleKey: PLAN_KEY, fieldKey, value: clean },
     update: { value: clean },
   })
 }

@@ -49,6 +49,11 @@
   --color-clay: #a9694c;
   --color-clay-deep: #8a5139;
   --color-clay-wash: #f8efe9;
+  /* For the parts of a plan only its owner sees. Kept apart from sage and rust,
+     which already mean chosen and unresolved. */
+  --color-private: #5b4a8a;
+  --color-private-soft: #e9e4f3;
+  --color-private-wash: #f7f5fb;
 
   /* Loaded in app/layout.tsx by next/font, so these resolve to self-hosted
      files rather than a request to Google on every page view. */

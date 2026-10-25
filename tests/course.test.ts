@@ -8,6 +8,8 @@ import {
   classProgress,
   COURSES,
   endLive,
+  planAnswersFor,
+  savePlanAnswerFor,
   LIVE_IDLE_HOURS,
   LiveError,
   liveState,
@@ -19,6 +21,7 @@ import {
 import { courseProblems, fillSentence, findModule, parseAnswer, stepsFor, type Field } from '../lib/course-content'
 import { acceptInvite, InviteError, sendInvite } from '../lib/invites'
 import { projectsForUser } from '../lib/projects'
+import { computePlan, parseStartingNumbers, PLAN_FIELDS, PLAN_KEY } from '../lib/plan'
 import { parseRoster } from '../lib/roster'
 import { prisma, reset } from './helpers'
 
@@ -320,5 +323,77 @@ describe('letting agents in', () => {
         { name: 'no address here', email: '', line: 'no address here' },
       ],
     )
+  })
+})
+
+describe('the 2027 plan', () => {
+  beforeEach(reset)
+  after(() => prisma.$disconnect())
+
+  it('works a target back into a week, on the team model', () => {
+    const n = computePlan({ closings_2026: '3', take_home: '4850', target_2027: '10', database_count: '50' })
+    assert.equal(n.planClosings, 10)
+    assert.equal(n.takeHomeAtTarget, 48_500)
+    assert.equal(n.contracts, 13)
+    assert.equal(n.agreements, 22)
+    assert.equal(n.apptsMet, 37)
+    assert.equal(n.apptsSet, 62)
+    assert.equal(n.conversations, 104)
+    assert.equal(n.conversationsPerWeek, 3)
+    assert.equal(n.sphereClosings, 7)
+    assert.equal(n.databaseNeeded, 88)
+    assert.equal(n.databaseToAdd, 38)
+  })
+
+  it('runs on what life costs when that is more than the target', () => {
+    const n = computePlan({ take_home: '5000', target_2027: '6', surviving: '$70,000', thriving: '14000', tax_rate: '30' })
+    assert.equal(n.lifeClosings, 24)
+    assert.equal(n.planClosings, 24)
+    assert.equal(n.drivenBy, 'life')
+  })
+
+  it('never shows gross commission: there is no field for it', () => {
+    assert.ok(!PLAN_FIELDS.some((field) => /gross|gci/i.test(`${field.key} ${field.label}`)))
+  })
+
+  it('keeps surviving and thriving out of what Davina is sent', async () => {
+    const agent = await person(Role.AGENT)
+    const davina = await person(Role.DESIGNER)
+    await saveAnswer(agent, COURSE.slug, PLAN_KEY, 'surviving', '70000')
+    await saveAnswer(agent, COURSE.slug, PLAN_KEY, 'my_story', 'Mine')
+
+    const hers = await planAnswersFor(agent, davina, COURSE.slug)
+    assert.equal(hers.surviving, undefined)
+    assert.equal(hers.my_story, 'Mine')
+
+    const theirs = await planAnswersFor(agent, agent, COURSE.slug)
+    assert.equal(theirs.surviving, '70000')
+  })
+
+  it('lets Davina work in an agent plan, but not the private part, and nobody else at all', async () => {
+    const agent = await person(Role.AGENT)
+    const other = await person(Role.AGENT)
+    const davina = await person(Role.DESIGNER)
+
+    await savePlanAnswerFor(davina, agent, COURSE.slug, 'target_2027', '12')
+    assert.equal((await answersFor(agent.id, COURSE.slug, PLAN_KEY)).target_2027, '12')
+    assert.equal(await prisma.worksheetAnswer.count({ where: { userId: davina.id } }), 0)
+
+    await assert.rejects(savePlanAnswerFor(davina, agent, COURSE.slug, 'surviving', '1'), AnswerError)
+    await assert.rejects(savePlanAnswerFor(other, agent, COURSE.slug, 'target_2027', '99'), AnswerError)
+  })
+
+  it('reads pasted starting numbers with a name in front and no commas in the numbers', () => {
+    const [line, bad] = parseStartingNumbers('Anthony Perry, perryasoldit@gmail.com, 3, 2, 0, 4850, 50, 10\nNo One, x@y.z, 1, 2')
+    assert.equal(line.email, 'perryasoldit@gmail.com')
+    assert.deepEqual(line.values, {
+      closings2026: 3,
+      listingSides: 2,
+      buyerSides: 0,
+      takeHome: 4850,
+      databaseCount: 50,
+      target2027: 10,
+    })
+    assert.equal(bad.values, null)
   })
 })

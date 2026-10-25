@@ -48,6 +48,22 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
         }
       />
 
+      <Link
+        href={`/learn/${course.slug}/plan`}
+        className="block rounded-xl border border-seaglass-deep/30 bg-seaglass-wash p-5 transition-shadow hover:shadow-lifted sm:p-6"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="eyebrow text-seaglass-deep">Built alongside the course</p>
+            <h2 className="font-display mt-1 text-2xl text-ink">Your 2027 plan</h2>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-driftwood-deep">
+              Your numbers, your target, and what it takes each week. It saves as you go, and Davina works on it with you.
+            </p>
+          </div>
+          <span className="text-sm font-medium text-seaglass-deep">Open it →</span>
+        </div>
+      </Link>
+
       <ol className="space-y-4">
         {course.modules.map((unit) => (
           <li key={unit.key}>
