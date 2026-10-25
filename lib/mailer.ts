@@ -226,6 +226,43 @@ Dominate Homes`
   return { to, subject: `Your ${projectName} portal is ready`, text, html }
 }
 
+/** Inviting an agent to the training course. */
+export function courseInviteEmail(
+  to: string,
+  name: string,
+  link: string,
+  days: number,
+  invitedBy: string,
+): Email {
+  const firstName = name.split(' ')[0]
+
+  const text = `Hi ${firstName},
+
+${invitedBy} has set you up in the Dominate Homes training course, Dominating Your Business.
+
+Every lesson is in there, and so is your homework. You fill it in right on the page and it saves as you type, so there is nothing to copy or email back. On Mondays you can follow along on your own screen while I teach.
+
+${link}
+
+That link sets up your account and opens the course. After that you sign in with your email address and we send you a link each time, so there is no password to remember.
+
+It expires in ${days} days. If it has run out, reply to this and we will send another.
+
+Davina
+Dominate Homes`
+
+  const html = wrap(
+    'Dominating Your Business',
+    `<p style="${BODY}">Hi ${escapeHtml(firstName)}, ${escapeHtml(invitedBy)} has set you up in the Dominate Homes training course, Dominating Your Business.</p>
+      <p style="${BODY}">Every lesson is in there, and so is your homework. You fill it in right on the page and it saves as you type, so there is nothing to copy or email back. On Mondays you can follow along on your own screen while I teach.</p>
+      <p style="margin:0 0 20px;"><a href="${link}" style="${BUTTON}">Open the course</a></p>
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#5f564a;">That link sets up your account. After that you sign in with your email address and we send you a link each time, so there is no password to remember.</p>
+      <p style="${QUIET}">It expires in ${days} days. If it has run out, reply to this and we will send another.</p>`,
+  )
+
+  return { to, subject: 'Your Dominate Homes training course is ready', text, html }
+}
+
 /** Telling the design side that somebody has asked to be let in. */
 export function accessRequestEmail(
   to: string,

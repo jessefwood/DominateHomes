@@ -1,3 +1,4 @@
+import { Role } from '@prisma/client'
 import { type NextRequest } from 'next/server'
 import { SESSION_COOKIE } from '@/lib/auth'
 import { redirectTo } from '@/lib/http'
@@ -28,8 +29,16 @@ export async function GET(request: NextRequest) {
   }
 
   // Straight into the project when the invitation named one, so the first
-  // thing they see is their house rather than a list with one row in it.
-  const response = redirectTo(result.projectSlug ? `/portal/${result.projectSlug}` : '/portal')
+  // thing they see is their house rather than a list with one row in it. An
+  // agent goes straight to the course, which is the only thing they are here
+  // for.
+  const response = redirectTo(
+    result.user.role === Role.AGENT
+      ? '/learn'
+      : result.projectSlug
+        ? `/portal/${result.projectSlug}`
+        : '/portal',
+  )
 
   response.cookies.set({
     name: SESSION_COOKIE,

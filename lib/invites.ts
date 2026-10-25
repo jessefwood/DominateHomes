@@ -1,17 +1,18 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { Role, type Invite, type User } from '@prisma/client'
+import { InviteRole, Role, type Invite, type User } from '@prisma/client'
 import { AuditAction, record } from './audit'
 import { normaliseEmail, SESSION_TTL_DAYS } from './auth'
 import { prisma } from './db'
-import { inviteEmail, mailer } from './mailer'
+import { courseInviteEmail, inviteEmail, mailer } from './mailer'
 
 /**
- * Inviting a client.
+ * Inviting a client, or an agent to the training course.
  *
  * Still no self-signup. This and an approved access request are the only two
  * ways a user row comes into being, and both of them end with a designer
- * deciding. Nothing here can hand out the designer role: `accept` writes
- * `Role.CLIENT` as a literal, and there is no argument that changes it.
+ * deciding. Nothing here can hand out the designer role: an invitation
+ * carries an InviteRole, which is client or agent and nothing else, and
+ * `accept` maps that to a Role through a fixed table.
  *
  * Same shape as LoginToken, for the same reasons: the emailed secret is never
  * stored, only its SHA-256 hash, so a leak of the Invite table cannot be used
@@ -43,6 +44,17 @@ export type SendInviteInput = {
   projectId?: string | null
   /** How they want to be described on the project, e.g. "Abbie and Russell". */
   label?: string | null
+  /**
+   * An agent invitation opens the training course instead of a project.
+   * There is no designer value to pass: see InviteRole.
+   */
+  role?: InviteRole
+}
+
+/** What accepting an invitation makes someone. Never a designer. */
+const ROLE_FOR: Record<InviteRole, Role> = {
+  [InviteRole.CLIENT]: Role.CLIENT,
+  [InviteRole.AGENT]: Role.AGENT,
 }
 
 /**
@@ -60,6 +72,7 @@ export async function sendInvite(
 ): Promise<Invite> {
   const email = normaliseEmail(input.email)
   const name = input.name.trim()
+  const role = input.role ?? InviteRole.CLIENT
 
   if (!email.includes('@') || email.length > 320) throw new InviteError('That does not look like an email address.')
   if (!name) throw new InviteError('Put in a name, so the email can say hello properly.')
@@ -77,6 +90,13 @@ export async function sendInvite(
 
   if (input.projectId && !project) throw new InviteError('No such project.')
 
+  // An agent on a client's project would see the client's budget. Agents are
+  // here for the course, and project access stays something only a client
+  // invitation hands out.
+  if (role === InviteRole.AGENT && project) {
+    throw new InviteError('Agents are invited to the course, not to a project.')
+  }
+
   // An outstanding invitation for the same address is replaced rather than
   // duplicated. Two live links to one inbox is a confusing thing to debug
   // later, and the person asking for this almost always means "send it again".
@@ -93,6 +113,7 @@ export async function sendInvite(
       name,
       projectId: project?.id ?? null,
       label: input.label?.trim() || null,
+      role,
       tokenHash: sha256(token),
       expiresAt: new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000),
       createdById: actor.id,
@@ -100,14 +121,16 @@ export async function sendInvite(
   })
 
   await mailer().send(
-    inviteEmail(
-      email,
-      name,
-      inviteLink(baseUrl, token),
-      INVITE_TTL_DAYS,
-      project?.displayName ?? 'Dominate Homes',
-      actor.name,
-    ),
+    role === InviteRole.AGENT
+      ? courseInviteEmail(email, name, inviteLink(baseUrl, token), INVITE_TTL_DAYS, actor.name)
+      : inviteEmail(
+          email,
+          name,
+          inviteLink(baseUrl, token),
+          INVITE_TTL_DAYS,
+          project?.displayName ?? 'Dominate Homes',
+          actor.name,
+        ),
   )
 
   await record({
@@ -116,7 +139,9 @@ export async function sendInvite(
     projectId: project?.id ?? null,
     subjectType: 'Invite',
     subjectId: invite.id,
-    summary: `${actor.name} invited ${name} (${email})${project ? ` to ${project.displayName}` : ''}`,
+    summary: `${actor.name} invited ${name} (${email})${
+      project ? ` to ${project.displayName}` : role === InviteRole.AGENT ? ' to the course' : ''
+    }`,
   })
 
   return invite
@@ -168,9 +193,9 @@ export async function acceptInvite(token: string): Promise<AcceptResult> {
         data: {
           email: invite.email,
           name: invite.name,
-          // Written as a literal, not taken from the invitation. An
-          // invitation cannot make a designer.
-          role: Role.CLIENT,
+          // Looked up, not copied from the invitation. InviteRole has no
+          // designer value, so an invitation cannot make one.
+          role: ROLE_FOR[invite.role],
           signInEnabled: true,
         },
       }))

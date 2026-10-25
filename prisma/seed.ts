@@ -46,21 +46,24 @@ const d = (amount: number) => Math.round(amount * 100)
  * intending to destroy client decisions, stop and ask.
  */
 async function assertSafeToSeed() {
-  const [approvals, chosen, orders, answered] = await Promise.all([
+  const [approvals, chosen, orders, answered, homework] = await Promise.all([
     prisma.approval.count(),
     prisma.selection.count({ where: { chosenSlot: { not: null } } }),
     prisma.purchaseOrder.count(),
     prisma.openItem.count({ where: { answer: { not: null } } }),
+    // The seed deletes every user, and an agent's homework goes with them.
+    // That is somebody's work as surely as a signed approval is.
+    prisma.worksheetAnswer.count(),
   ])
 
-  const decisions = approvals + chosen + orders + answered
+  const decisions = approvals + chosen + orders + answered + homework
   if (decisions === 0) return
 
   if (process.env.FORCE_SEED === 'yes') {
     console.warn(
       `\nFORCE_SEED is set. Destroying ${decisions} client decision(s): ` +
         `${approvals} approval(s), ${chosen} chosen item(s), ${orders} order(s), ` +
-        `${answered} answered question(s).\n`,
+        `${answered} answered question(s), ${homework} homework answer(s).\n`,
     )
     return
   }
@@ -68,7 +71,7 @@ async function assertSafeToSeed() {
   throw new Error(
     `Refusing to seed. This database holds ${decisions} real client decision(s): ` +
       `${approvals} approval(s), ${chosen} chosen item(s), ${orders} order(s), ` +
-      `${answered} answered question(s).\n\n` +
+      `${answered} answered question(s), ${homework} homework answer(s).\n\n` +
       'Seeding wipes every table and there is no undo. If you are seeing this, ' +
       'the database has already been set up and does not need seeding again.\n\n' +
       'If you genuinely mean to erase the project and start over, run it again ' +

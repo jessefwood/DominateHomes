@@ -19,6 +19,7 @@ const NAV: AdminLink[] = [
   { href: '/admin/people', label: 'People' },
   { href: '/admin/website', label: 'Website' },
   { href: '/admin/proposals', label: 'Proposals' },
+  { href: '/admin/course', label: 'Course' },
   { href: '/admin/integrations', label: 'Integrations' },
   { href: '/admin/activity', label: 'Activity' },
   { href: '/admin/trash', label: 'Trash' },
@@ -45,7 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen">
-      <header className="hairline sticky top-0 z-40 border-b bg-page/85 backdrop-blur-sm">
+      <header className="hairline sticky top-0 z-40 border-b bg-page/85 backdrop-blur-sm print:hidden">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-8">
           <Link href="/admin" className="flex shrink-0 items-center gap-2.5">
             <Logomark className="w-7 shrink-0 text-ink" title="Dominate Homes" />
@@ -69,7 +70,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
           <div className="flex-1 lg:hidden" />
 
-          <BackLink fallbackHref="/admin" className="hidden sm:inline-flex" />
+          {/*
+            Only where the full row of sections is not showing. With eight
+            sections in the row there is no room left for it, and the row
+            already does the job of getting back.
+          */}
+          <BackLink fallbackHref="/admin" className="hidden sm:inline-flex lg:hidden" />
 
           <AccountMenu name={user.name} email={user.email} isDesigner />
 

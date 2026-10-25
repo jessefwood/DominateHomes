@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { Role } from '@prisma/client'
 import { AccountMenu } from '@/components/account-menu'
 import { Logomark } from '@/components/logo'
 import { Card, EmptyState, PageHeader, Photo, PhotoMissing, Pill } from '@/components/ui'
@@ -57,6 +59,12 @@ function TopBar({ user }: { user: User }) {
  */
 export default async function PortalIndex() {
   const user = await requireUser()
+
+  // Every sign-in lands here. An agent has no projects and never will, so
+  // the page would only ever tell them nothing is ready. The course is what
+  // they came for.
+  if (user.role === Role.AGENT) redirect('/learn')
+
   const projects = await projectsForUser(user)
   const designer = isDesigner(user)
 

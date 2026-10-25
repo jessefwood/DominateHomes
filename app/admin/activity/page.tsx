@@ -51,6 +51,7 @@ const GROUPS: { key: string; label: string; actions: AuditAction[] }[] = [
     actions: [AuditAction.FILE_UPLOADED, AuditAction.FILE_DELETED, AuditAction.FILE_RESTORED],
   },
   { key: 'messages', label: 'Messages', actions: [AuditAction.MESSAGE_SENT] },
+  { key: 'course', label: 'Course', actions: [AuditAction.HOMEWORK_TURNED_IN] },
 ]
 
 export default async function ActivityPage({

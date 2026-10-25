@@ -19,6 +19,9 @@ export async function reset() {
     // events do not have to, but a log left behind from the previous test is
     // noise in the next one.
     prisma.auditEvent.deleteMany(),
+    prisma.worksheetAnswer.deleteMany(),
+    prisma.homeworkTurnIn.deleteMany(),
+    prisma.liveSession.deleteMany(),
     prisma.upload.deleteMany(),
     prisma.message.deleteMany(),
     prisma.invite.deleteMany(),
