@@ -107,6 +107,12 @@ export default async function AdminCoursePage() {
                       <Link href={`/admin/course/${agent.id}`} className="text-ink underline-offset-2 hover:underline">
                         {agent.name}
                       </Link>
+                      <Link
+                        href={`/admin/course/${agent.id}/plan`}
+                        className="ml-3 text-xs text-seaglass-deep underline-offset-2 hover:underline"
+                      >
+                        2027 plan
+                      </Link>
                       {agent.signInEnabled ? null : (
                         <span className="ml-2">
                           <Pill tone="clay">locked out</Pill>
@@ -124,6 +130,18 @@ export default async function AdminCoursePage() {
             </table>
           </div>
         )}
+      </section>
+
+      <section className="space-y-3">
+        <SectionHeading title="2027 plans" />
+        <p className="text-[15px] leading-relaxed text-driftwood-deep">
+          Every agent has a 2027 plan inside the course, saved to their account. Open one from the grid above to work
+          on it with them.{' '}
+          <Link href="/admin/course/numbers" className="text-ink underline underline-offset-2">
+            Load their starting numbers
+          </Link>{' '}
+          first so each plan opens with their own.
+        </p>
       </section>
 
       <section className="space-y-4">

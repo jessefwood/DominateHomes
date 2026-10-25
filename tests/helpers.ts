@@ -22,6 +22,7 @@ export async function reset() {
     prisma.worksheetAnswer.deleteMany(),
     prisma.homeworkTurnIn.deleteMany(),
     prisma.liveSession.deleteMany(),
+    prisma.planStart.deleteMany(),
     prisma.upload.deleteMany(),
     prisma.message.deleteMany(),
     prisma.invite.deleteMany(),

@@ -1300,3 +1300,26 @@ model LiveSession {
   endedAt       DateTime?
   updatedAt     DateTime  @updatedAt
 }
+
+/// Where an agent's 2027 plan starts: last year's figures and the number set
+/// with Davina, loaded by Davina from the team workbook.
+///
+/// Keyed by email rather than user, so the numbers can be loaded before the
+/// agent has accepted their invitation. Kept out of the repository on purpose:
+/// the repository is readable by anyone, and these are a person's earnings.
+///
+/// Only take-home is stored, never gross commission. Davina's call: agents
+/// plan from what reaches them, not from a figure the splits then cut down.
+model PlanStart {
+  email String @id
+
+  closings2026  Int
+  listingSides  Int @default(0)
+  buyerSides    Int @default(0)
+  /// After splits, referral fees, the team fee and the brokerage fee.
+  takeHomeCents Int
+  databaseCount Int @default(0)
+  target2027    Int
+
+  updatedAt DateTime @updatedAt
+}

@@ -28,7 +28,18 @@ export default async function AgentWorkbookPage({ params }: { params: Promise<{ 
         ← The class
       </Link>
 
-      <PageHeader eyebrow={agent.email} title={agent.name} intro={`${course.title}, everything so far.`} actions={<PrintButton />} />
+      <PageHeader eyebrow={agent.email} title={agent.name} intro={`${course.title}, everything so far.`} actions={
+          <>
+            <Link
+              href={`/admin/course/${agent.id}/plan`}
+              className="hairline rounded-md border px-4 py-2 text-sm text-ink transition-colors hover:bg-oyster print:hidden"
+            >
+              2027 plan
+            </Link>
+            <PrintButton />
+          </>
+        }
+      />
 
       <WorkbookView
         course={course}
